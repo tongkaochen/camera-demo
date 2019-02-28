@@ -8,7 +8,8 @@ import android.view.SurfaceView
 import java.io.IOException
 
 class CameraPreview(context:Context,
-                    private val mCamera: Camera) : SurfaceView(context), SurfaceHolder.Callback {
+                    private val mCamera: Camera
+) : SurfaceView(context), SurfaceHolder.Callback {
 
     private val mHolder: SurfaceHolder = holder.apply {
         addCallback(this@CameraPreview)
