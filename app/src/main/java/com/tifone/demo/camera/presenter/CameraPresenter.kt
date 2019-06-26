@@ -1,19 +1,39 @@
 package com.tifone.demo.camera.presenter
 
-import android.content.Context
-import android.hardware.camera2.CameraManager
-import android.view.SurfaceHolder
-import com.tifone.demo.camera.agent.CameraAgent
-import com.tifone.demo.camera.agent.CameraOperationsImpl
-import com.tifone.demo.camera.view.IView
+import com.tifone.demo.camera.model.BaseCameraModel
+import com.tifone.demo.camera.model.CameraModelManager
+import com.tifone.demo.camera.stragety.ApiLevel
+import com.tifone.demo.camera.stragety.CameraApiStrategy
+import com.tifone.demo.camera.view.CameraUI
 
-class CameraPresenter(view: IView, holder: SurfaceHolder) :
-        IPresenter {
-    private var itsView: IView = view
-    private val mContext: Context = view.getContext()
-    private var mCameraAgent: CameraAgent = CameraAgent(
-            CameraOperationsImpl(mContext, holder.surface))
-    override fun requestCamera() {
-        mCameraAgent.openCamera()
+/**
+ * resolve the basic camera request
+ */
+open class CameraPresenter(cameraUI: CameraUI){
+    protected var mCameraUI: CameraUI = cameraUI
+    init {
+
+    }
+    fun openCamera(cameraId: String) {
+
+    }
+    fun closeCamera() {
+
+    }
+    fun applyFlashMode() {
+
+    }
+
+    fun applyAEMode() {
+
+    }
+    fun applyAFMode() {
+
+    }
+    fun applyZoom() {
+
+    }
+    fun getCameraModule(): BaseCameraModel {
+        return CameraModelManager.getCameraModel(ApiLevel.API2)
     }
 }

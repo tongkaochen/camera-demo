@@ -1,6 +1,6 @@
 package com.tifone.demo.camera.agent
 
-interface CameraOperations {
-    fun open()
+interface CameraOperations<T> {
+    fun open(t: T)
     fun startPreview()
 }

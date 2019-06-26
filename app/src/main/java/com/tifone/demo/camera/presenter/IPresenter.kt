@@ -1,5 +1,5 @@
 package com.tifone.demo.camera.presenter
 
-interface IPresenter {
-    fun requestCamera()
+interface IPresenter<T> {
+    fun requestCamera(t: T)
 }

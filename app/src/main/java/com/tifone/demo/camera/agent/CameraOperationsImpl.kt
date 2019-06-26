@@ -2,6 +2,7 @@ package com.tifone.demo.camera.agent
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
 import android.hardware.camera2.CameraDevice.StateCallback
 import android.os.Handler
@@ -11,25 +12,25 @@ import com.tifone.demo.camera.utils.CameraUtil
 import com.tifone.demo.camera.utils.PermissionUtil
 
 class CameraOperationsImpl :
-        CameraOperations,
+        CameraOperations<SurfaceTexture>,
         StateCallback {
     private var mContext: Context
     private var mCameraManager: CameraManager
     private var mHandler: Handler
     private var mCameraDevice: CameraDevice? = null
     private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
-    private var mSurface: Surface
+    private lateinit var mSurface: SurfaceTexture
     private var mCaptureSession: CameraCaptureSession? = null
     private var mPreviewRequest: CaptureRequest? = null
 
-    constructor(context: Context, surface: Surface) {
+    constructor(context: Context) {
         mContext = context
         mCameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         mHandler = Handler()
-        mSurface = surface
     }
 
-    override fun open() {
+    override fun open(surface: SurfaceTexture) {
+        mSurface = surface
         openCameraAndCheckPermission()
     }
 
@@ -65,9 +66,11 @@ class CameraOperationsImpl :
     private fun createPreviewSession() {
         mCaptureRequestBuilder = mCameraDevice
                 ?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-        mCaptureRequestBuilder?.addTarget(mSurface)
+        //mSurface.setDefaultBufferSize(640, 480)
+        val surface = Surface(mSurface)
+        mCaptureRequestBuilder?.addTarget(surface)
         mCameraDevice?.createCaptureSession(
-                listOf(mSurface), mCameraStateCallback, mHandler)
+                listOf(surface), mCameraStateCallback, mHandler)
     }
 
     private val mCameraStateCallback = object : CameraCaptureSession.StateCallback() {

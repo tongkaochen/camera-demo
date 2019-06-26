@@ -1,10 +1,10 @@
 package com.tifone.demo.camera.agent
 
-class CameraAgent(cameraOperation: CameraOperations) {
+class CameraAgent<T>(cameraOperation: CameraOperations<T>) {
     private var mCameraOperation = cameraOperation
 
-    public fun openCamera() {
-        mCameraOperation.open()
+    public fun openCamera(t: T) {
+        mCameraOperation.open(t)
     }
     public fun startCameraPreview() {
         mCameraOperation.startPreview()
