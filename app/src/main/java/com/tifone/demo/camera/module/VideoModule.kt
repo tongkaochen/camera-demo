@@ -8,24 +8,6 @@ class VideoModule(cameraUI: CameraUI) : BaseModule{
     private var mCameraUI: CameraUI? = cameraUI
     private var mPresenter: VideoPresenter? = null
 
-    companion object {
-        private var INSTANCE: VideoModule? = null
-        private val mObject = Object()
-        fun getInstance(view: CameraUI): VideoModule {
-            var instance = INSTANCE
-            if (instance == null) {
-                synchronized(mObject) {
-                    instance = INSTANCE
-                    if (INSTANCE == null) {
-                        instance = VideoModule(view)
-                        INSTANCE = instance
-                    }
-                }
-            }
-            return instance!!
-        }
-    }
-
     override fun create() {
         mCameraUI?.apply {
             mPresenter = VideoPresenter(this)

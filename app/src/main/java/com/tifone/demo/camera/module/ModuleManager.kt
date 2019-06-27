@@ -12,8 +12,8 @@ class ModuleManager(view: CameraUI, moduleId: ModuleID) {
     }
     private fun getModuleFor(id: ModuleID): BaseModule {
         return when(id) {
-            ModuleID.PHOTO -> PhotoModule.getInstance(mCameraUI)
-            ModuleID.VIDEO -> VideoModule.getInstance(mCameraUI)
+            ModuleID.PHOTO -> PhotoModule(mCameraUI)
+            ModuleID.VIDEO -> VideoModule(mCameraUI)
         }
     }
     fun switchModule(moduleId: ModuleID) {

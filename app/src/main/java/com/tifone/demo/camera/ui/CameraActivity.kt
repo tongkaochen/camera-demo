@@ -13,7 +13,7 @@ class CameraActivity: Activity() {
         initView()
 
     }
-    fun initView() {
+    private fun initView() {
 
     }
 }

@@ -3,8 +3,10 @@ package com.tifone.demo.camera.model
 import android.content.Context
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
 import android.os.Handler
 import android.os.HandlerThread
+import com.tifone.demo.camera.camera.CameraId
 import com.tifone.demo.camera.task.CameraAsyncRunner
 import com.tifone.demo.camera.task.TaskRunner
 
@@ -53,13 +55,13 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     override fun onTaskRun(what: Int, any: Any) {
         // run on background thread
         when(what) {
-            OPERATION_OPEN_CAMERA -> handleOpenCamera(any as String)
+            OPERATION_OPEN_CAMERA -> handleOpenCamera(any as CameraId)
             OPERATION_CLOSE_CAMERA -> handleCloseCamera()
         }
     }
 
-    private fun handleOpenCamera(cameraId: String) {
-
+    private fun handleOpenCamera(cameraId: CameraId) {
+        cameraId.value()
     }
     private fun handleCloseCamera() {
 
