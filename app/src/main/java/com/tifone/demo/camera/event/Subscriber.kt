@@ -3,6 +3,6 @@ package com.tifone.demo.camera.event
 import com.tifone.demo.camera.utils.DataWrapper
 
 interface Subscriber {
-    fun onReceiveEvent(action: Int, data: DataWrapper)
-    fun subscribeEvents(): List<Int>?
+    fun onReceiveEvent(action: Subscriptions.Event, data: DataWrapper?)
+    fun subscribeEvents(): List<Subscriptions.Event>
 }

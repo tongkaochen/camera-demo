@@ -1,6 +1,10 @@
 package com.tifone.demo.camera.model
 
 import android.content.Context
+import android.hardware.camera2.CameraDevice
+import android.view.Surface
+import com.tifone.demo.camera.callback.CameraRequestCallback
+import com.tifone.demo.camera.callback.CameraStatusCallback
 
 /**
  * base camera operation interface, you can implement it to do something different
@@ -9,11 +13,13 @@ import android.content.Context
 interface BaseCameraModel {
 
     companion object {
-        const val operation_open_camera = 1
-        const val operation_close_camera = 2
-        const val operation_start_preview = 3
+        const val OPERATION_OPEN_CAMERA = 1
+        const val OPERATION_CLOSE_CAMERA = 2
+        const val OPERATION_START_PREVIEW = 3
     }
+    fun setCameraStatusCallback(callback:CameraStatusCallback)
     fun openCamera(cameraId: String)
+    fun createSession(surface:Surface)
     fun closeCamera()
     fun destroy()
 }

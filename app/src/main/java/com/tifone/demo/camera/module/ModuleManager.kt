@@ -2,18 +2,17 @@ package com.tifone.demo.camera.module
 
 import com.tifone.demo.camera.view.CameraUI
 
-class ModuleManager(view: CameraUI, moduleId: ModuleID) {
-    private var mCameraUI = view
+class ModuleManager private constructor() {
     private var mCurrentModule: BaseModule? = null
 
-    fun initModule(id: ModuleID) {
-        mCurrentModule = getModuleFor(id)
+    fun initModule(view: CameraUI, id: ModuleID) {
+        mCurrentModule = createModuleFor(view, id)
         mCurrentModule?.create()
     }
-    private fun getModuleFor(id: ModuleID): BaseModule {
+    private fun createModuleFor(view: CameraUI, id: ModuleID): BaseModule {
         return when(id) {
-            ModuleID.PHOTO -> PhotoModule(mCameraUI)
-            ModuleID.VIDEO -> VideoModule(mCameraUI)
+            ModuleID.PHOTO -> PhotoModule(view)
+            ModuleID.VIDEO -> VideoModule(view)
         }
     }
     fun switchModule(moduleId: ModuleID) {

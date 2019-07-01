@@ -8,11 +8,11 @@ import com.tifone.demo.camera.loge
 import com.tifone.demo.camera.logw
 import java.util.*
 
-class PreviewSizeUtil {
+class PreviewSizeHelper {
     companion object {
-        const val TAG = "PreviewSizeUtil"
+        const val TAG = "PreviewSizeHelper"
     }
-    fun getMatchPreviewSize(sensorOrientation: Int,
+    fun getMatchSize(sensorOrientation: Int,
                      availableSizes: Array<Size>): Size {
         val screenSize = DeviceInfo.get().getScreenSize()
         val screenRotation = DeviceInfo.get().getRotation()

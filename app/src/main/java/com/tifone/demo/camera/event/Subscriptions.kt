@@ -1,11 +1,11 @@
 package com.tifone.demo.camera.event
 
+import android.os.Handler
 import android.util.Log
 import com.tifone.demo.camera.utils.DataWrapper
-import java.util.*
 import kotlin.collections.ArrayList
 
-class Subscriptions {
+class Subscriptions private constructor(){
 
     private var mSubscriptions: MutableSet<Subscriber> = HashSet()
     private val mSubscriberLock = Any()
@@ -13,13 +13,15 @@ class Subscriptions {
 
     private var mInPosting = false
 
-    object Event {
-        const val ALL = 0
+    enum class Event {
+        ALL, // all event.
+        SHUTTER_CLICK,
+        CLICK
     }
     companion object {
         private const val TAG = "Subscriptions"
         private const val DEBUG = true
-        private const val SUBSCRIPTION_LIMIT_SIZE = 30
+        const val SUBSCRIPTION_LIMIT_SIZE = 30
         private var INSTANCE: Subscriptions? = null
         private val mAny = Any()
         @Synchronized
@@ -41,6 +43,7 @@ class Subscriptions {
             if (DEBUG) Log.d(TAG, "subscribe : $subscriber")
             if (mSubscriptions.size >= SUBSCRIPTION_LIMIT_SIZE) {
                 Log.e(TAG, "subscriptions is out of limit, subscribe $subscriber fail")
+                return
             }
             mSubscriptions.add(subscriber)
         }
@@ -48,8 +51,10 @@ class Subscriptions {
     private fun addToPendingListLocked(item: PostItem) {
         if (DEBUG) Log.d(TAG, "addToPendingListLocked : $item")
         mPendingList.add(item)
+        if (DEBUG) Log.d(TAG, "pending list size : ${mPendingList.size}")
     }
     private fun resolvePendingDataLocked() {
+        if (DEBUG) Log.d(TAG, "resolvePendingDataLocked : ${mPendingList.size}")
         if (mPendingList.size < 1) {
             return
         }
@@ -61,29 +66,57 @@ class Subscriptions {
         }
         pendingList.clear()
     }
-    private fun postEventLocked(action: Int, data: DataWrapper) {
-        for (subscription in mSubscriptions) {
+    private fun isSubscribed(eventList: List<Event>, target: Event): Boolean {
+        return eventList.contains(target) or eventList.contains(Event.ALL)
+    }
+    private fun postEventLocked(action: Event, data: DataWrapper?) {
+        if (DEBUG) Log.d(TAG, "postEventLocked : ${mSubscriptions.size}")
+        for (subscriber in mSubscriptions) {
             mInPosting = true
-            val events = subscription.subscribeEvents()
-            val isSubscribed = events?.contains(action) ?: false
+            val events = subscriber.subscribeEvents()
+            val isSubscribed =  isSubscribed(events, action)
             val shouldDispatch = action == Event.ALL || isSubscribed
             if (!shouldDispatch) {
                 continue
             }
-            subscription.onReceiveEvent(action, data)
+            if (DEBUG) Log.d(TAG, "onReceiveEvent : $subscriber")
+            subscriber.onReceiveEvent(action, data)
+
         }
         mInPosting = false
         resolvePendingDataLocked()
     }
 
-    // post message to target type
+    /** post message to the all subscribed subscriber
+     * this method is Synchronized, please do not do the time-consuming time
+     */
     @Synchronized
-    fun postEvent(action: Int, data: DataWrapper) {
+    fun postEvent(action: Event, data: DataWrapper?) {
+        if (DEBUG) Log.d(TAG, "postEvent : $action")
+        postEventLocked(action, data)
+    }
+
+    @Synchronized
+    fun postEvent(action: Event) {
+        if (DEBUG) Log.d(TAG, "postEvent : $action")
+        postEventLocked(action, null)
+    }
+
+    @Deprecated("need optimize")
+    @Synchronized
+    fun postEventAsync(handler: Handler, action: Event, data: DataWrapper?) {
+        // TODO
+        if (DEBUG) Log.d(TAG, "postEventAync : $action")
         if (mInPosting) {
+            if (DEBUG) Log.d(TAG, "add to pending list : $action")
             addToPendingListLocked(PostItem(action, data))
             return
         }
-        postEventLocked(action, data)
+
+        handler.post {
+            if (DEBUG) Log.d(TAG, "run : $action")
+            postEventLocked(action, data)
+        }
     }
 
     // unsubscribe for all the subscriber,
@@ -96,7 +129,7 @@ class Subscriptions {
         }
     }
 
-    private class PostItem(val event: Int, val data: DataWrapper) {
+    private class PostItem(val event: Event, val data: DataWrapper?) {
         override fun toString(): String {
             return "event: $event "
         }

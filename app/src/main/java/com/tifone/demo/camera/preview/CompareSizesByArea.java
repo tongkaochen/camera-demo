@@ -1,4 +1,4 @@
-package com.tct.magnifier.data;
+package com.tifone.demo.camera.preview;
 
 import android.util.Size;
 
@@ -10,4 +10,5 @@ public class CompareSizesByArea implements Comparator<Size> {
         return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
                 (long)rhs.getWidth() * rhs.getHeight());
     }
+
 }

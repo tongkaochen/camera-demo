@@ -2,6 +2,8 @@ package com.tifone.demo.camera.view
 
 import android.app.Activity
 import android.content.Context
+import android.content.res.Configuration
+import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.os.Bundle
 import android.view.SurfaceHolder
@@ -9,6 +11,7 @@ import android.view.SurfaceView
 import android.view.TextureView
 import android.widget.ImageView
 import com.tifone.demo.camera.R
+import com.tifone.demo.camera.device.DeviceInfo
 import com.tifone.demo.camera.presenter.IPresenter
 import com.tifone.demo.camera.presenter.TexturePresenter
 import com.tifone.demo.camera.utils.PermissionUtil
@@ -19,11 +22,13 @@ class CameraActivity : IView, Activity() {
     private lateinit var mPreviewView: SurfaceView
     private lateinit var mCaptureButton: ImageView
     private lateinit var mTexture: TextureView
+    private val mDeviceInfo = DeviceInfo.get()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         checkPermissionAndGrant()
         setContentView(R.layout.camera_main_layout)
+
         initView()
         mPreviewView.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -69,4 +74,9 @@ class CameraActivity : IView, Activity() {
     }
 
     override fun getContext(): Context = this
+
+    override fun onConfigurationChanged(newConfig: Configuration?) {
+        super.onConfigurationChanged(newConfig)
+        mDeviceInfo.updateDisplayInfo(windowManager.defaultDisplay)
+    }
 }

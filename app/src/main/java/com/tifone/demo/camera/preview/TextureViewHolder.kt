@@ -2,10 +2,8 @@ package com.tifone.demo.camera.preview
 
 import android.graphics.SurfaceTexture
 import android.view.TextureView
-import android.widget.TextView
-import com.tifone.demo.camera.presenter.TexturePresenter
 
-class PreviewSurfaceHolder {
+class TextureViewHolder {
     private var mCallbacks: MutableList<SurfaceCallback> = ArrayList()
     interface SurfaceCallback {
         fun onSurfaceAvailable(surface: SurfaceTexture, width: Int, height: Int)
@@ -18,6 +16,7 @@ class PreviewSurfaceHolder {
             }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture?): Boolean {
+                surfaceTextureDestroyed()
                 return false
             }
 
@@ -30,8 +29,11 @@ class PreviewSurfaceHolder {
             }
         }
     }
-    fun setSurfaceCallback(callback: SurfaceCallback) {
+    fun registerSurfaceCallback(callback: SurfaceCallback) {
         mCallbacks.add(callback)
+    }
+    fun unregisterSurfaceCallback(callback: SurfaceCallback) {
+        mCallbacks.remove(callback)
     }
     private fun surfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
         for (callback in mCallbacks) {

@@ -1,20 +1,22 @@
 package com.tifone.demo.camera.module
 
+import android.graphics.SurfaceTexture
 import com.tifone.demo.camera.presenter.PhotoPresenter
+import com.tifone.demo.camera.preview.TextureViewHolder
 import com.tifone.demo.camera.view.CameraUI
 
 /**
  * camera photo module
  * manage the photo relate logic
  */
-class PhotoModule(cameraUI: CameraUI) : BaseModule {
-    private var mCameraUI: CameraUI? = cameraUI
-    private var mPresenter: PhotoPresenter? = null
+class PhotoModule(cameraUI: CameraUI) : BaseModule, TextureViewHolder.SurfaceCallback {
+    private var mCameraUI: CameraUI = cameraUI
+    private lateinit var mPresenter: PhotoPresenter
+    private val mSurfaceHolder = cameraUI.getPreviewSurfaceHolder()
 
     override fun create() {
-        mCameraUI?.apply {
-            mPresenter = PhotoPresenter(this)
-        }
+        mPresenter = PhotoPresenter(mCameraUI)
+        mSurfaceHolder.registerSurfaceCallback(this)
     }
 
     override fun start() {
@@ -27,12 +29,22 @@ class PhotoModule(cameraUI: CameraUI) : BaseModule {
 
     override fun destroy() {
         // TODO
-        mCameraUI = null
+        mSurfaceHolder.registerSurfaceCallback(this)
     }
 
     override fun getId(): ModuleID {
         return ModuleID.PHOTO
     }
 
+    override fun onSurfaceAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+        mPresenter.onSurfaceAvailable(surface, width, height)
+    }
+
+    override fun onSurfaceDestroy() {
+        mPresenter.onSurfaceDestroy()
+    }
+
+    override fun onSurfaceChanged(surface: SurfaceTexture?, width: Int, height: Int) {
+    }
 
 }

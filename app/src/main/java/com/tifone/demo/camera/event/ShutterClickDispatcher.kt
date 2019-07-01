@@ -2,20 +2,20 @@ package com.tifone.demo.camera.event
 
 import android.view.View
 
-class ShutterDispatcher{
+class ShutterClickDispatcher {
     interface ShutterClickListener {
         fun onShutterClicked(view: View)
     }
     private var mListener: MutableList<ShutterClickListener> = ArrayList()
     companion object {
-        private var INSTANCE: ShutterDispatcher? = null
+        private var INSTANCE: ShutterClickDispatcher? = null
         private val mAny = Any()
         @Synchronized
-        fun getDefault(): ShutterDispatcher {
+        fun getDefault(): ShutterClickDispatcher {
             if (INSTANCE == null) {
                 synchronized(mAny) {
                     if (INSTANCE == null) {
-                        INSTANCE = ShutterDispatcher()
+                        INSTANCE = ShutterClickDispatcher()
                     }
                 }
             }
@@ -28,7 +28,10 @@ class ShutterDispatcher{
             listener.onShutterClicked(view)
         }
     }
-    fun registerShutterClickLisenter(listener: ShutterClickListener) {
+    fun register(listener: ShutterClickListener) {
+        mListener.add(listener)
+    }
+    fun unregister(listener: ShutterClickListener) {
         mListener.remove(listener)
     }
 }

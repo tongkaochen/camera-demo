@@ -1,6 +1,6 @@
 package com.tifone.demo.camera.callback;
 
-public interface CameraStatusCallback {
-    void onComplete();
-    void onFail();
+public interface CameraRequestCallback<T> {
+    void onComplete(T result);
+    void onFail(String msg);
 }
