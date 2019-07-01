@@ -10,6 +10,6 @@ interface BaseModule {
     fun getId(): ModuleID
     fun create()
     fun start()
-    fun pause()
+    fun stop()
     fun destroy()
 }

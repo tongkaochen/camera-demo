@@ -1,10 +1,12 @@
 package com.tifone.demo.camera.preview
 
 import android.graphics.SurfaceTexture
+import android.os.Handler
 import android.view.TextureView
 
 class TextureViewHolder {
     private var mCallbacks: MutableList<SurfaceCallback> = ArrayList()
+    private lateinit var mTextureView: TextureView
     interface SurfaceCallback {
         fun onSurfaceAvailable(surface: SurfaceTexture, width: Int, height: Int)
         fun onSurfaceDestroy()
@@ -49,6 +51,10 @@ class TextureViewHolder {
         for (callback in mCallbacks) {
             callback.onSurfaceChanged(surface, width, height)
         }
+    }
+
+    fun getTextureView(): TextureView {
+        return mTextureView
     }
 
 }

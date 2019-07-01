@@ -8,7 +8,7 @@ import android.support.annotation.WorkerThread
 interface TaskRunner {
     interface Callback {
         @WorkerThread
-        fun onTaskRun(what: Int, any: Any)
+        fun onTaskRun(what: Int, any: Any?)
     }
     fun setCallback(callback: Callback)
     fun run(what: Int)

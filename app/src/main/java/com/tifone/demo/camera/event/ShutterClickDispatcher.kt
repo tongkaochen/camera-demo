@@ -2,14 +2,13 @@ package com.tifone.demo.camera.event
 
 import android.view.View
 
-class ShutterClickDispatcher {
-    interface ShutterClickListener {
-        fun onShutterClicked(view: View)
-    }
-    private var mListener: MutableList<ShutterClickListener> = ArrayList()
-    companion object {
+class ShutterClickDispatcher private constructor(){
+
+    companion object Instance{
+
         private var INSTANCE: ShutterClickDispatcher? = null
         private val mAny = Any()
+
         @Synchronized
         fun getDefault(): ShutterClickDispatcher {
             if (INSTANCE == null) {
@@ -22,6 +21,12 @@ class ShutterClickDispatcher {
             return INSTANCE!!
         }
     }
+
+    interface ShutterClickListener {
+        fun onShutterClicked(view: View)
+    }
+    private var mListener: MutableList<ShutterClickListener> = ArrayList()
+
 
     fun onShutterClicked(view: View) {
         for (listener in mListener) {

@@ -11,23 +11,12 @@ import android.os.Build
 class PermissionUtil {
     companion object {
 
-        public fun checkCameraPermission(activity: Activity) {
-            if (activity.checkSelfPermission(Manifest.permission.CAMERA)
-                    != PackageManager.PERMISSION_GRANTED) {
-                activity.requestPermissions(arrayOf(Manifest.permission.CAMERA), 1)
-            }
+        fun isCameraPermissionGranted(context: Context): Boolean {
+            return isPermissionGranted(context, Manifest.permission.CAMERA)
         }
-        public fun checkStoragePermission(activity: Activity) {
-            if (activity.checkSelfPermission(
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                activity.requestPermissions(
-                        arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 2)
-            }
-        }
-
-        public fun isCameraPermissionGranted(context: Context): Boolean {
-            return context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        fun isPermissionGranted(context: Context, permission: String): Boolean {
+            return context.checkSelfPermission(permission) ==
+                    PackageManager.PERMISSION_GRANTED
         }
     }
 }

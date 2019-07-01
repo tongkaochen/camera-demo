@@ -18,7 +18,7 @@ class VideoModule(cameraUI: CameraUI) : BaseModule{
         // TODO
     }
 
-    override fun pause() {
+    override fun stop() {
         // TODO
     }
 

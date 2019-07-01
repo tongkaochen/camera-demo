@@ -2,11 +2,11 @@ package com.tifone.demo.camera.ui
 
 import android.app.Activity
 import android.os.Bundle
+import android.support.annotation.IdRes
+import android.view.View
 
 abstract class BaseActivity: Activity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        initView()
+    protected fun <T : View> fView(@IdRes viewId: Int): T {
+        return findViewById(viewId)
     }
-    protected abstract fun initView()
 }

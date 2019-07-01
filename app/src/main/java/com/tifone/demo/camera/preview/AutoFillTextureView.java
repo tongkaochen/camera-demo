@@ -13,8 +13,7 @@ import static com.tifone.demo.camera.LogUtilKt.loge;
 
 
 public class AutoFillTextureView extends TextureView {
-    private int mRatioWidth;
-    private int mRatioHeight;
+    private float mAspectRatio;
     public AutoFillTextureView(Context context) {
         super(context);
     }
@@ -26,20 +25,13 @@ public class AutoFillTextureView extends TextureView {
     public AutoFillTextureView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
-    public void setAspectRatio(int width, int height) {
-        if (width < 0 || height < 0) {
-            throw new IllegalArgumentException("width and height should >= 0");
+    public void setAspectRatio(float aspectRatio) {
+        if (aspectRatio < 0) {
+            throw new IllegalArgumentException("aspectRatio >= 0");
         }
-        logd(this, "setAspectRatio : width = " + width + " height " + height);
-        mRatioWidth = width;
-        mRatioHeight = height;
+        logd(this, "aspectRatio is " + aspectRatio);
+        mAspectRatio = aspectRatio;
         requestLayout();
-    }
-
-    public void setDefaultBufferSize(int width, int height) {
-        logd("setDefaultBufferSize: width = " + width
-                + " height = " + height);
-        getSurfaceTexture().setDefaultBufferSize(width, height);
     }
 
     @Override
@@ -50,15 +42,29 @@ public class AutoFillTextureView extends TextureView {
         setDimensionWithAspectRatio(width, height);
     }
     private void setDimensionWithAspectRatio(int width, int height) {
-        if (mRatioWidth == 0 || mRatioHeight == 0) {
+        if (mAspectRatio <= 0) {
             setMeasuredDimension(width, height);
         } else {
-            if (width < height * mRatioWidth / mRatioHeight) {
-                // width is smaller
-                setMeasuredDimension(width, width * mRatioHeight / mRatioWidth);
+            // preview size ratio is larger than 1.0f,
+            // mean the texture view height's width < height
+            if (mAspectRatio > 1.0f) {
+                // need texture' s width < height
+                if (width > height) {
+                    // height can be match, width should be smaller than height
+                    setMeasuredDimension((int) (height / mAspectRatio), height);
+                } else {
+                    // width can be match, height should be larger than width
+                    setMeasuredDimension(width, (int) (width * mAspectRatio));
+                }
             } else {
-                // height is smaller
-                setMeasuredDimension(height * mRatioWidth / mRatioHeight, height);
+                // need texture' width > height
+                if (width > height) {
+                    // height can be match, width should be smaller than height
+                    setMeasuredDimension((int) (height * mAspectRatio), height);
+                } else {
+                    // width can be match, height should be larger than width
+                    setMeasuredDimension(width, (int) (width / mAspectRatio));
+                }
             }
         }
     }

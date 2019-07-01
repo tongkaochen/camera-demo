@@ -8,7 +8,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import java.io.File
@@ -31,7 +30,7 @@ class CameraDemoActivity :  Activity(){
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.camera_demo_layout)
+        setContentView(R.layout.camera_api1_demo_layout)
         requestPermission()
         initView()
         mCamera = getCameraInstance()
