@@ -34,6 +34,7 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
     private var mSurfacePrepared = false
     private val mSurfacePreparedLock = Semaphore(1)
     private var mCameraOpened = false
+    private var mCameraInfo: CameraInfo =  CameraInfo(mCameraUI.getContext())
 
     fun init() {
         logd("init")
@@ -55,15 +56,11 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
         if (!isCameraOpenAllowed()) {
             return
         }
-        val cameraInfo = CameraInfo(mCameraUI.getContext(), cameraId)
-        val availablePreviewSize = cameraInfo.getAvailablePreviewSize(SurfaceTexture::class.java)
-        availablePreviewSize?.apply {
-            mPreviewSize = PreviewSizeHelper().getMatchSize(
-                    cameraInfo.getSensorOrientation(), availablePreviewSize, mCameraUI.getUIAspectRatio())
-            logd("mPreviewSize: $mPreviewSize")
-        } ?: return
-
-        mCameraModel.openCamera(cameraId.value())
+        mCameraInfo.setCameraId(cameraId)
+        mPreviewSize = mCameraInfo.getPreviewSize(
+                SurfaceTexture::class.java, mCameraUI.getUIAspectRatio())
+        logd("mPreviewSize: $mPreviewSize")
+        mCameraModel.openCamera(mCameraInfo)
         mCameraOpened = true
     }
     private val mCameraStatusCallback =

@@ -1,11 +1,7 @@
 package com.tifone.demo.camera.preview;
 
 import android.content.Context;
-import android.graphics.Matrix;
-import android.graphics.RectF;
 import android.util.AttributeSet;
-import android.util.Size;
-import android.view.Surface;
 import android.view.TextureView;
 
 import static com.tifone.demo.camera.LogUtilKt.logd;
@@ -68,4 +64,5 @@ public class AutoFillTextureView extends TextureView {
             }
         }
     }
+
 }

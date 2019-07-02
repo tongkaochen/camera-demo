@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.Surface
 import com.tifone.demo.camera.callback.CameraStatusCallback
 import com.tifone.demo.camera.callback.TakePictureCallback
+import com.tifone.demo.camera.camera.CameraInfo
 import java.lang.ref.WeakReference
 
 /**
@@ -20,7 +21,7 @@ class CameraModel(context: Context): BaseCameraModel {
 
     private var mContext = context
 
-    override fun openCamera(cameraId: String) {
+    override fun openCamera(cameraInfo: CameraInfo) {
 
     }
 

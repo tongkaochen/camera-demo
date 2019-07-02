@@ -6,6 +6,7 @@ import android.view.Surface
 import com.tifone.demo.camera.callback.CameraRequestCallback
 import com.tifone.demo.camera.callback.CameraStatusCallback
 import com.tifone.demo.camera.callback.TakePictureCallback
+import com.tifone.demo.camera.camera.CameraInfo
 
 /**
  * base camera operation interface, you can implement it to do something different
@@ -13,7 +14,7 @@ import com.tifone.demo.camera.callback.TakePictureCallback
  */
 interface BaseCameraModel {
     fun setCameraStatusCallback(callback:CameraStatusCallback)
-    fun openCamera(cameraId: String)
+    fun openCamera(cameraInfo: CameraInfo)
     fun startPreview(surface:Surface)
     fun closeCamera()
     fun destroy()

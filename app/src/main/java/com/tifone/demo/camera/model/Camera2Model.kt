@@ -2,16 +2,21 @@ package com.tifone.demo.camera.model
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.ImageFormat
 import android.hardware.camera2.*
+import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
 import android.view.Surface
 import com.tifone.demo.camera.callback.CameraStatusCallback
 import com.tifone.demo.camera.callback.TakePictureCallback
+import com.tifone.demo.camera.camera.CameraInfo
+import com.tifone.demo.camera.camera.CameraSettings
 import com.tifone.demo.camera.logd
 import com.tifone.demo.camera.loge
 import com.tifone.demo.camera.task.CameraAsyncRunner
 import com.tifone.demo.camera.task.TaskRunner
+import com.tifone.demo.camera.utils.CameraUtil
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
@@ -21,6 +26,8 @@ import java.util.concurrent.TimeUnit
  */
 class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
 
+    private var mCaptureHandler: Handler? = null
+    private var mCaptureThread: HandlerThread? = null
     private var mPreviewRequest: CaptureRequest? = null
     private var mCameraDevice: CameraDevice? = null
     private var mContext = context
@@ -33,7 +40,18 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     private var mPreviewSurface: Surface? = null
     private var mCaptureSession: CameraCaptureSession? = null
     private var mTakePictureCallback: TakePictureCallback ? = null
+    private lateinit var mCameraInfo: CameraInfo
+    private lateinit var mCaptureImageReader: ImageReader
+    private lateinit var mCaptureBuilder: CaptureRequest.Builder? = null
+    private var mState = State.PREVIEW
 
+    private enum class State {
+        PREVIEW,
+        WAITING_AF_LOCKED,
+        WAITING_PRE_CAPTURE,
+        WAITING_AE_LOCKED,
+        PICTURE_TAKEN
+    }
     companion object {
         private const val OPERATION_OPEN_CAMERA = 1
         private const val OPERATION_CLOSE_CAMERA = 2
@@ -54,6 +72,10 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         mBackgroundThread = HandlerThread("camera2 thread")
         mBackgroundThread!!.start()
         mBackgroundHandler = Handler(mBackgroundThread!!.looper)
+
+        mCaptureThread = HandlerThread("image capture thread")
+        mCaptureThread!!.start()
+        mCaptureHandler = Handler(mCaptureThread!!.looper)
     }
     private fun stopBackgroundThread() {
         mBackgroundThread?.apply {
@@ -65,8 +87,9 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
 
     }
 
-    override fun openCamera(cameraId: String) {
-        mCameraAsyncRunner.run(OPERATION_OPEN_CAMERA, cameraId)
+    override fun openCamera(cameraInfo: CameraInfo) {
+        mCameraInfo = cameraInfo
+        mCameraAsyncRunner.run(OPERATION_OPEN_CAMERA, cameraInfo.getCameraId())
     }
 
     override fun startPreview(surface: Surface) {
@@ -181,11 +204,27 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
                     " preview surface: $mPreviewSurface")
             return
         }
-        val surfaces = listOf(mPreviewSurface)
+        initImageReader()
+        val surfaces = listOf(mPreviewSurface, mCaptureImageReader.surface)
         mCameraDevice?.apply {
             acquireCameraOperationLock()
             createCaptureSession(surfaces, mCreateSessionCallback, mBackgroundHandler)
         }
+    }
+    private fun initImageReader() {
+        val previewSize = mCameraInfo.getCurrentPreviewSize()
+        val ratio = previewSize?.let {
+            CameraUtil.getAspectRatio(it)
+        }?:CameraSettings.NORMAL_ASPECT_RATIO
+        val captureSize = mCameraInfo.getOutputImageSize(ImageFormat.JPEG, ratio)
+        mCaptureImageReader = ImageReader.newInstance(
+                captureSize.width, captureSize.height, ImageFormat.JPEG, 1)
+        mCaptureImageReader.setOnImageAvailableListener(
+                mOnImageAvailableListener, mCaptureHandler)
+    }
+    private val mOnImageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+        logd("image capture = $reader")
+        reader.acquireLatestImage().close()
     }
     private val mCreateSessionCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigureFailed(session: CameraCaptureSession) {
@@ -225,6 +264,52 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
                 mPreviewCaptureCallback, mBackgroundHandler)
     }
     private val mPreviewCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
+
+        private fun run(result: CaptureResult) {
+            when(mState) {
+                State.WAITING_AF_LOCKED -> onWaitingAFLocked(result)
+                State.WAITING_PRE_CAPTURE -> onPreCapture(result)
+                State.WAITING_AE_LOCKED -> onWaitingAELocked(result)
+            }
+        }
+        private fun onWaitingAELocked(result: CaptureResult) {
+            val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+            if (aeState == null
+                    || aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
+                mState = State.PICTURE_TAKEN
+                captureStillPicture()
+            }
+        }
+
+        private fun onPreCapture(result: CaptureResult) {
+            val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+            if (aeState == null
+                    || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED
+                    || aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE
+                    || aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED) {
+                mState = State.WAITING_AE_LOCKED
+            }
+        }
+
+        private fun onWaitingAFLocked(result: CaptureResult) {
+            val afState = result.get(CaptureResult.CONTROL_AF_STATE)
+            if (afState == null) {
+                mState = State.PICTURE_TAKEN
+                captureStillPicture()
+            } else if (afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED
+                    || afState == CaptureRequest.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
+                val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+                if (aeState == null || aeState == CaptureRequest.CONTROL_AE_STATE_CONVERGED) {
+                    mState = State.PICTURE_TAKEN
+                    captureStillPicture()
+                } else {
+                    runPreCaptureSequence()
+                }
+            }
+        }
+
+
+
         override fun onCaptureCompleted(session: CameraCaptureSession,
                                         request: CaptureRequest,
                                         result: TotalCaptureResult) {
@@ -244,6 +329,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
                                          partialResult: CaptureResult) {
             super.onCaptureProgressed(session, request, partialResult)
             //logd("onCaptureProgressed")
+            run(partialResult)
         }
 
         override fun onCaptureBufferLost(session: CameraCaptureSession,
@@ -251,6 +337,18 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
                                          target: Surface, frameNumber: Long) {
             super.onCaptureBufferLost(session, request, target, frameNumber)
             logd("onCaptureBufferLost")
+        }
+    }
+
+    private fun runPreCaptureSequence() {
+        if (mCaptureBuilder == null) {
+            mCaptureBuilder = getCaptureRequestBuilder()
+        }
+        mCaptureBuilder?.apply {
+            set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                    CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
+            mState = State.WAITING_PRE_CAPTURE
+            mCaptureSession?.capture(build(), mPreviewCaptureCallback, mCaptureHandler)
         }
     }
 
@@ -268,10 +366,13 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         // create the capture request
         val builder = getCaptureRequestBuilder() ?: return false
 
+        // request trigger AF
         builder.set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CaptureRequest.CONTROL_AF_TRIGGER_START)
         // apply AE/AF value
         try {
+            mCaptureBuilder = builder
+            mState = State.WAITING_AF_LOCKED
             // start capture
             mCaptureSession!!.capture(builder.build(),
                     mPreviewCaptureCallback, mBackgroundHandler)
@@ -280,6 +381,9 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
             e.printStackTrace()
         }
         return false
+    }
+    private fun captureStillPicture() {
+
     }
     private fun getCaptureRequestBuilder(): CaptureRequest.Builder? {
         return try {
