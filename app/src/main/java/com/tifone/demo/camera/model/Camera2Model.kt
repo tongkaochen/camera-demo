@@ -7,16 +7,19 @@ import android.hardware.camera2.*
 import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.SparseIntArray
 import android.view.Surface
 import com.tifone.demo.camera.callback.CameraStatusCallback
 import com.tifone.demo.camera.callback.TakePictureCallback
 import com.tifone.demo.camera.camera.CameraInfo
 import com.tifone.demo.camera.camera.CameraSettings
+import com.tifone.demo.camera.device.DeviceInfo
 import com.tifone.demo.camera.logd
 import com.tifone.demo.camera.loge
 import com.tifone.demo.camera.task.CameraAsyncRunner
 import com.tifone.demo.camera.task.TaskRunner
 import com.tifone.demo.camera.utils.CameraUtil
+import com.tifone.demo.camera.utils.ImageUtil
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
@@ -42,7 +45,9 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     private var mTakePictureCallback: TakePictureCallback ? = null
     private lateinit var mCameraInfo: CameraInfo
     private lateinit var mCaptureImageReader: ImageReader
-    private lateinit var mCaptureBuilder: CaptureRequest.Builder? = null
+    private var mCaptureBuilder: CaptureRequest.Builder? = null
+    private var mPreviewBuilder: CaptureRequest.Builder? = null
+    private var mOrientationHelper: CameraOrientationHelper = CameraOrientationHelper()
     private var mState = State.PREVIEW
 
     private enum class State {
@@ -56,7 +61,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         private const val OPERATION_OPEN_CAMERA = 1
         private const val OPERATION_CLOSE_CAMERA = 2
         private const val OPERATION_CREATE_SESSION = 3
-        private const val OPERATION_TAKE_PICTURE = 3
+        private const val OPERATION_TAKE_PICTURE = 4
     }
 
     init {
@@ -126,6 +131,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
 
     override fun onTaskRun(what: Int, any: Any?) {
         // run on background thread
+        logd("what = $what")
         when(what) {
             OPERATION_OPEN_CAMERA -> handleOpenCamera(any as String)
             OPERATION_CLOSE_CAMERA -> handleCloseCamera()
@@ -223,8 +229,15 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
                 mOnImageAvailableListener, mCaptureHandler)
     }
     private val mOnImageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-        logd("image capture = $reader")
-        reader.acquireLatestImage().close()
+        logd("mOnImageAvailableListener")
+        val image = reader.acquireLatestImage()
+        val bytes = ImageUtil.imageToBytes(image)
+        image.close()
+        mCaptureHandler?.post {
+
+            mTakePictureCallback?.onTakeComplete(bytes)
+
+        }
     }
     private val mCreateSessionCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigureFailed(session: CameraCaptureSession) {
@@ -257,7 +270,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         // apply some settings to request
         previewBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                 CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-
+        mPreviewBuilder = previewBuilder
         mPreviewRequest = previewBuilder.build()
         // start preview
         mCaptureSession!!.setRepeatingRequest(mPreviewRequest,
@@ -293,12 +306,14 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
 
         private fun onWaitingAFLocked(result: CaptureResult) {
             val afState = result.get(CaptureResult.CONTROL_AF_STATE)
+            logd("afState = $afState")
             if (afState == null) {
                 mState = State.PICTURE_TAKEN
                 captureStillPicture()
             } else if (afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED
                     || afState == CaptureRequest.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
                 val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+                logd("aeState = $aeState")
                 if (aeState == null || aeState == CaptureRequest.CONTROL_AE_STATE_CONVERGED) {
                     mState = State.PICTURE_TAKEN
                     captureStillPicture()
@@ -355,7 +370,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     private fun handleTakePicture() {
         if (!lockFocus()) {
             loge("lock focus failed")
-            mTakePictureCallback?.onTakeFail("lock focus failed")
+            mTakePictureCallback?.onTakeFailed("lock focus failed")
         }
     }
     private fun lockFocus(): Boolean {
@@ -383,13 +398,67 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         return false
     }
     private fun captureStillPicture() {
+        logd("captureStillPicture")
+        // create request build
+        val captureBuilder = mCameraDevice?.createCaptureRequest(
+                CameraDevice.TEMPLATE_STILL_CAPTURE)
+                ?: return mTakePictureCallback?.onTakeFailed("camera device is null")!!
+        // apply AE/ Orientation settings to request
+        captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+        val deviceRotation = DeviceInfo.get().getRotation()
+        val sensorRotation = mCameraInfo.getSensorOrientation()
+        val pictureRotation = mOrientationHelper.getOrentation(deviceRotation, sensorRotation)
+        captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, pictureRotation)
+        // add capture surface
+        captureBuilder.addTarget(mCaptureImageReader.surface)
+        // stop current repeat
+        mCaptureSession?.stopRepeating() ?: return mTakePictureCallback?.onTakeFailed("mCaptureSession is null")!!
+
+        val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+            override fun onCaptureCompleted(session: CameraCaptureSession,
+                                            request: CaptureRequest,
+                                            result: TotalCaptureResult) {
+                // capture complete, unlock focus
+                unlockFocus()
+            }
+
+            override fun onCaptureFailed(session: CameraCaptureSession,
+                                         request: CaptureRequest,
+                                         failure: CaptureFailure) {
+                unlockFocus()
+                mTakePictureCallback?.onTakeFailed("capture fail")
+            }
+        }
+        // capture image
+        mCaptureSession!!.capture(captureBuilder.build(), captureCallback, mCaptureHandler)
+    }
+
+    private fun unlockFocus() {
+        logd("unlockFocus")
+        mCaptureBuilder?.apply {
+            mCaptureBuilder = getCaptureRequestBuilder()
+        }
+        try {
+            mCaptureBuilder!!.apply {
+                set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
+                set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                        CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL)
+            }
+            mCaptureSession?.capture(mCaptureBuilder!!.build(), null, mCaptureHandler) ?: return
+            mCaptureSession!!.setRepeatingRequest(mPreviewRequest, mPreviewCaptureCallback, mBackgroundHandler)
+        } catch (e: CameraAccessException) {
+            e.printStackTrace()
+        }
 
     }
+
     private fun getCaptureRequestBuilder(): CaptureRequest.Builder? {
         return try {
             var builder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             builder.set(CaptureRequest.CONTROL_AF_MODE,
                     CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            builder.addTarget(mPreviewSurface)
             builder
         }catch (e: CameraAccessException) {
             e.printStackTrace()

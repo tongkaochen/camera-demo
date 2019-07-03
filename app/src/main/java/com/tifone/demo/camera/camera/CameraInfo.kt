@@ -6,6 +6,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.params.StreamConfigurationMap
 import android.util.Size
+import com.tifone.demo.camera.logd
 import com.tifone.demo.camera.preview.PreviewSizeHelper
 
 class CameraInfo(context: Context) {
@@ -48,7 +49,7 @@ class CameraInfo(context: Context) {
     /**
      * please call {@see setCameraId} before
      */
-    fun <T> getAvailablePreviewSize(target: Class<T>): Array<Size>? {
+    private fun <T> getAvailablePreviewSize(target: Class<T>): Array<Size>? {
         try {
             val cc: CameraCharacteristics = mCharacteristics[mCurrentId]!!
             val scalerStreamMap: StreamConfigurationMap? =
@@ -66,9 +67,10 @@ class CameraInfo(context: Context) {
 
     fun <T> getPreviewSize(target: Class<T>, aspectRatio: Float): Size? {
         val availablePreviewSize = getAvailablePreviewSize(target) ?: return null
-        mCurrentPreviewSize?.apply {
-            mCurrentPreviewSize = PreviewSizeHelper().getMatchSize(
-                    getSensorOrientation(), availablePreviewSize, aspectRatio)
+        logd("availablePreviewSize = $availablePreviewSize")
+
+        if (mCurrentPreviewSize == null) {
+            mCurrentPreviewSize = PreviewSizeHelper().getMatchSize(availablePreviewSize, aspectRatio)
         }
         return mCurrentPreviewSize
     }
@@ -96,7 +98,7 @@ class CameraInfo(context: Context) {
 
     private fun getCharacteristics(id: String): CameraCharacteristics? {
         try {
-            mCameraManager.getCameraCharacteristics(id)
+            return mCameraManager.getCameraCharacteristics(id)
         } catch (e: CameraAccessException) {
             e.printStackTrace()
         }

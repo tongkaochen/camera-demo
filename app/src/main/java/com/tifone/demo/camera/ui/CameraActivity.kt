@@ -10,6 +10,7 @@ import android.view.TextureView
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.RelativeLayout
 import com.tifone.demo.camera.R
 import com.tifone.demo.camera.camera.CameraSettings
 import com.tifone.demo.camera.device.DeviceInfo
@@ -87,6 +88,9 @@ class CameraActivity: BaseActivity(), CameraUI {
         mPreviewContainer = fView(R.id.preview_container)
         mDeviceInfo.updateDisplayInfo(windowManager.defaultDisplay)
         mBottomBarContainer = fView(R.id.bottom_bar_container)
+        val params = mBottomBarContainer.layoutParams as RelativeLayout.LayoutParams
+        params.bottomMargin = params.bottomMargin + mDeviceInfo.getNavigationBarHeight()
+        mBottomBarContainer.layoutParams = params
         mBottomLayoutManager = BottomLayoutManager(this, mBottomBarContainer)
         mBottomLayoutManager.init()
     }

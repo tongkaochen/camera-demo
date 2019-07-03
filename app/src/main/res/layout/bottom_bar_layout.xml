@@ -2,11 +2,14 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/bottom_bar_root"
     android:layout_width="match_parent"
+    android:background="@color/translucent_bg_color"
     android:layout_height="@dimen/bottom_bar_height">
     <ImageView
         android:id="@+id/shutter_btn"
         android:layout_width="64dp"
         android:layout_height="64dp"
+        android:layout_marginBottom="16dp"
         android:src="@drawable/ic_camera"
-        android:layout_centerInParent="true" />
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true" />
 </RelativeLayout>

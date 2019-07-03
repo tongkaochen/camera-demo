@@ -1,6 +1,8 @@
 package com.tifone.demo.camera.presenter
 
 import android.graphics.SurfaceTexture
+import android.media.MediaActionSound
+import android.media.MediaScannerConnection
 import android.util.Size
 import android.view.Surface
 import com.tifone.demo.camera.callback.CameraStatusCallback
@@ -10,11 +12,18 @@ import com.tifone.demo.camera.camera.CameraInfo
 import com.tifone.demo.camera.logd
 import com.tifone.demo.camera.loge
 import com.tifone.demo.camera.logw
+import com.tifone.demo.camera.media.CameraEffectPlayer
 import com.tifone.demo.camera.model.BaseCameraModel
 import com.tifone.demo.camera.model.CameraModelManager
+import com.tifone.demo.camera.module.StorageModel
 import com.tifone.demo.camera.preview.PreviewSizeHelper
+import com.tifone.demo.camera.repository.FileNameGenerator
+import com.tifone.demo.camera.repository.RepositoryKeys
+import com.tifone.demo.camera.repository.RepositoryManager
 import com.tifone.demo.camera.stragety.ApiLevel
+import com.tifone.demo.camera.utils.DataWrapper
 import com.tifone.demo.camera.utils.PermissionUtil
+import com.tifone.demo.camera.utils.getExternalPath
 import com.tifone.demo.camera.view.CameraUI
 import com.tifone.demo.camera.view.ViewState
 import java.util.concurrent.Semaphore
@@ -35,10 +44,17 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
     private val mSurfacePreparedLock = Semaphore(1)
     private var mCameraOpened = false
     private var mCameraInfo: CameraInfo =  CameraInfo(mCameraUI.getContext())
+    private lateinit var mImageRepository: StorageModel
+    private lateinit var mDataWrapper: DataWrapper
+    private lateinit var mImageFileNameGenerator: FileNameGenerator
+    private var mSoundPlayer = CameraEffectPlayer()
 
     fun init() {
         logd("init")
         createCameraModule()
+        mImageRepository = RepositoryManager.getImageRepository()
+        mDataWrapper = DataWrapper()
+        mImageFileNameGenerator = FileNameGenerator(getExternalPath(), "demo")
     }
     private fun isCameraOpenAllowed(): Boolean {
         if (!PermissionUtil.isCameraPermissionGranted(mCameraUI.getContext())) {
@@ -60,6 +76,9 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
         mPreviewSize = mCameraInfo.getPreviewSize(
                 SurfaceTexture::class.java, mCameraUI.getUIAspectRatio())
         logd("mPreviewSize: $mPreviewSize")
+        if (mPreviewSize == null) {
+            return
+        }
         mCameraModel.openCamera(mCameraInfo)
         mCameraOpened = true
     }
@@ -85,9 +104,7 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
     private fun tryToStartPreview() {
         if (mSurfacePrepared) {
             logd("startPreview")
-            mSurfaceTexture?.apply {
-                setDefaultBufferSize(mPreviewSize!!.width, mPreviewSize!!.height)
-            }
+            mSurfaceTexture!!.setDefaultBufferSize(mPreviewSize!!.width, mPreviewSize!!.height)
             mCameraModel.startPreview(Surface(mSurfaceTexture))
         } else {
             waitingForSurfaceAvailable()
@@ -163,9 +180,28 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
     }
     private val mTakePictureCallback = object : TakePictureCallback {
         override fun onTakeComplete(data: ByteArray) {
+            logd("onTakeComplete: $data")
+            mSoundPlayer.playShutterEffect()
+            val fileName = mImageFileNameGenerator.generate(FileNameGenerator.TYPE_JPEG)
+            mDataWrapper.set(RepositoryKeys.SAVE_PATH, fileName)
+            mDataWrapper.set(RepositoryKeys.IMAGE_DATA, data)
+            mImageRepository.execute(mDataWrapper, mImageSaveResultCallback)
         }
 
-        override fun onTakeFail(msg: String) {
+        override fun onTakeFailed(msg: String) {
+            logd("onTakeFailed: $msg")
+        }
+
+    }
+    private val mImageSaveResultCallback = object : StorageModel.ResultCallback {
+        override fun onComplete(result: String?) {
+            logd("save complete: $result")
+            MediaScannerConnection.scanFile(
+                    mCameraUI.getContext(), Array(1){result!!}, null, null)
+        }
+
+        override fun onFail(msg: String?) {
+            logd("save onFail: $msg")
         }
 
     }

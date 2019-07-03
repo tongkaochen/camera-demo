@@ -12,16 +12,14 @@ class PreviewSizeHelper {
     companion object {
         const val TAG = "PreviewSizeHelper"
     }
-    fun getMatchSize(sensorOrientation: Int,
-                     availableSizes: Array<Size>, targetRatio: Float): Size {
+    fun getMatchSize(availableSizes: Array<Size>, targetRatio: Float): Size {
         val screenSize = DeviceInfo.get().getScreenSize()
-        val screenRotation = DeviceInfo.get().getRotation()
         logd(TAG, "screen size: $screenSize")
         val targetSize = Size(screenSize.width, (screenSize.width * targetRatio).toInt())
-        val previewSize = findBestMatchPreviewSize(availableSizes.toList(), targetSize)
-        return getRotatedPreviewSize(previewSize, sensorOrientation, screenRotation)
+        return findBestMatchPreviewSize(availableSizes.toList(), targetSize)
     }
-    private fun getRotatedPreviewSize(previewSize:Size,
+
+    private fun rotatedPreviewSize(previewSize:Size,
                                       sensorOrientation: Int,
                                       screenRotation: Int): Size {
         val width = previewSize.width

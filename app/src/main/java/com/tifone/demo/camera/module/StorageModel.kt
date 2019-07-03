@@ -5,8 +5,8 @@ import java.io.File
 
 interface StorageModel {
     interface ResultCallback {
-        fun onComplete(file: File)
-        fun onFail(msg: String)
+        fun onComplete(result: String?)
+        fun onFail(msg: String?)
     }
-    fun execute(request: DataWrapper)
+    fun execute(request: DataWrapper, callback: ResultCallback)
 }

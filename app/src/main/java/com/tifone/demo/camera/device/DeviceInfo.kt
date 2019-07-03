@@ -8,6 +8,7 @@ class DeviceInfo private constructor() {
     // device screen size
     private var mScreenSize = Size(0,0)
     private var mRotation = -1
+    private var mNavigationBarHeight = -1
     companion object {
         private var INSTANCE: DeviceInfo? = null
         private val mAny = Any()
@@ -32,10 +33,16 @@ class DeviceInfo private constructor() {
     fun getRotation(): Int {
         return mRotation
     }
+    fun getNavigationBarHeight(): Int {
+        return mNavigationBarHeight
+    }
     fun updateDisplayInfo(display: Display) {
         val realSize = Point()
+        val size = Point()
+        display.getSize(size)
         display.getRealSize(realSize)
         mScreenSize = Size(realSize.x, realSize.y)
         mRotation = display.rotation
+        mNavigationBarHeight = realSize.y - size.y
     }
 }
