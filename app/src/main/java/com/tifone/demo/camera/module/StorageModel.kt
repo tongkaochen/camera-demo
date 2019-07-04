@@ -9,4 +9,5 @@ interface StorageModel {
         fun onFail(msg: String?)
     }
     fun execute(request: DataWrapper, callback: ResultCallback)
+    fun release()
 }

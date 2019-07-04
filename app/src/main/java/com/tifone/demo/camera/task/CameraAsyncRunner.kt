@@ -11,13 +11,13 @@ import java.util.concurrent.ThreadPoolExecutor
  * Create by Tifone on 2019/6/26.
  */
 class CameraAsyncRunner(msg: String) : TaskRunner{
-    private var mHandlerThread: HandlerThread = HandlerThread(msg)
+    private var mHandlerThread: HandlerThread? = HandlerThread(msg)
     private var mHandler: CameraHandler
     private var mMessage: Message
 
     init {
-        mHandlerThread.start()
-        mHandler = CameraHandler(mHandlerThread.looper)
+        mHandlerThread!!.start()
+        mHandler = CameraHandler(mHandlerThread!!.looper)
         mMessage = mHandler.obtainMessage()
     }
     override fun setCallback(callback: TaskRunner.Callback) {
@@ -39,6 +39,15 @@ class CameraAsyncRunner(msg: String) : TaskRunner{
         // 发送消息到异步线程
         mHandler.sendMessage(mMessage)
     }
+
+    override fun quit() {
+        mHandlerThread?.apply {
+            quitSafely()
+            join()
+            mHandlerThread = null
+        }
+    }
+
     class CameraHandler(looper: Looper) : Handler(looper) {
         private var mCallback: TaskRunner.Callback? = null
         fun setCallback(callback: TaskRunner.Callback) {

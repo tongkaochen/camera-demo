@@ -1,6 +1,7 @@
 package com.tifone.demo.camera.presenter
 
 import android.graphics.SurfaceTexture
+import android.media.ExifInterface
 import android.media.MediaActionSound
 import android.media.MediaScannerConnection
 import android.util.Size
@@ -22,6 +23,7 @@ import com.tifone.demo.camera.repository.RepositoryKeys
 import com.tifone.demo.camera.repository.RepositoryManager
 import com.tifone.demo.camera.stragety.ApiLevel
 import com.tifone.demo.camera.utils.DataWrapper
+import com.tifone.demo.camera.utils.ImageUtil
 import com.tifone.demo.camera.utils.PermissionUtil
 import com.tifone.demo.camera.utils.getExternalPath
 import com.tifone.demo.camera.view.CameraUI
@@ -178,6 +180,10 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
             mCameraModel.takePicture()
         }
     }
+    fun destroy() {
+        mCameraModel.destroy()
+        mImageRepository.release()
+    }
     private val mTakePictureCallback = object : TakePictureCallback {
         override fun onTakeComplete(data: ByteArray) {
             logd("onTakeComplete: $data")
@@ -186,6 +192,10 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
             mDataWrapper.set(RepositoryKeys.SAVE_PATH, fileName)
             mDataWrapper.set(RepositoryKeys.IMAGE_DATA, data)
             mImageRepository.execute(mDataWrapper, mImageSaveResultCallback)
+            // transform jpeg data to bitmap
+            val bitmap = ImageUtil.translateJpegDataToBitmap(data, mCameraUI.getThumbSize())
+            // set bitmap to thumb view
+            mCameraUI.updateThumb(bitmap)
         }
 
         override fun onTakeFailed(msg: String) {

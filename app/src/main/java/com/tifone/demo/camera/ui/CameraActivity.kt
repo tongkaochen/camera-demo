@@ -3,8 +3,10 @@ package com.tifone.demo.camera.ui
 import android.Manifest
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Handler
+import android.util.Size
 import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
@@ -93,6 +95,7 @@ class CameraActivity: BaseActivity(), CameraUI {
         mBottomBarContainer.layoutParams = params
         mBottomLayoutManager = BottomLayoutManager(this, mBottomBarContainer)
         mBottomLayoutManager.init()
+        com.tifone.demo.camera.logd("current thread: ${Thread.currentThread()}")
     }
     private fun initSurfaceHolder() {
         logd("init texture view")
@@ -177,6 +180,16 @@ class CameraActivity: BaseActivity(), CameraUI {
                 mTextureViewHolder.getTextureView()
         if (textureView is AutoFillTextureView) {
             textureView.setAspectRatio(ratio)
+        }
+    }
+
+    override fun getThumbSize(): Size {
+        return mBottomLayoutManager.thumbSize
+    }
+
+    override fun updateThumb(bitmap: Bitmap) {
+        runOnUiThread {
+            mBottomLayoutManager.updateThumb(bitmap)
         }
     }
 

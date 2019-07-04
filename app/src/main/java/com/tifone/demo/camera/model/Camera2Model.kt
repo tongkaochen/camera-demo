@@ -89,7 +89,12 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
             mBackgroundThread = null
             mBackgroundHandler = null
         }
-
+        mCaptureThread?.apply {
+            quitSafely()
+            join()
+            mCaptureThread = null
+            mCaptureHandler = null
+        }
     }
 
     override fun openCamera(cameraInfo: CameraInfo) {
@@ -123,10 +128,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     }
 
     override fun destroy() {
-        mBackgroundThread?.apply {
-            quitSafely()
-            mBackgroundThread = null
-        }
+        mCameraAsyncRunner.quit()
     }
 
     override fun onTaskRun(what: Int, any: Any?) {
@@ -287,8 +289,9 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         }
         private fun onWaitingAELocked(result: CaptureResult) {
             val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+            logd("onWaitingAELocked, aeState:$aeState")
             if (aeState == null
-                    || aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
+                    || aeState != CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
                 mState = State.PICTURE_TAKEN
                 captureStillPicture()
             }
@@ -296,6 +299,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
 
         private fun onPreCapture(result: CaptureResult) {
             val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+            logd("onPreCapture: aeState:$aeState")
             if (aeState == null
                     || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED
                     || aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE
@@ -323,26 +327,22 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
             }
         }
 
-
-
         override fun onCaptureCompleted(session: CameraCaptureSession,
                                         request: CaptureRequest,
                                         result: TotalCaptureResult) {
-            super.onCaptureCompleted(session, request, result)
             //logd("onCaptureCompleted")
+            run(result)
         }
 
         override fun onCaptureFailed(session: CameraCaptureSession,
                                      request: CaptureRequest,
                                      failure: CaptureFailure) {
-            super.onCaptureFailed(session, request, failure)
             logd("onCaptureFailed")
         }
 
         override fun onCaptureProgressed(session: CameraCaptureSession?,
                                          request: CaptureRequest,
                                          partialResult: CaptureResult) {
-            super.onCaptureProgressed(session, request, partialResult)
             //logd("onCaptureProgressed")
             run(partialResult)
         }
@@ -350,20 +350,20 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         override fun onCaptureBufferLost(session: CameraCaptureSession,
                                          request: CaptureRequest,
                                          target: Surface, frameNumber: Long) {
-            super.onCaptureBufferLost(session, request, target, frameNumber)
             logd("onCaptureBufferLost")
         }
     }
 
     private fun runPreCaptureSequence() {
+        logd("runPreCaptureSequence")
         if (mCaptureBuilder == null) {
             mCaptureBuilder = getCaptureRequestBuilder()
         }
-        mCaptureBuilder?.apply {
-            set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+        mCaptureBuilder?.also {
+            it.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
             mState = State.WAITING_PRE_CAPTURE
-            mCaptureSession?.capture(build(), mPreviewCaptureCallback, mCaptureHandler)
+            mCaptureSession?.capture(it.build(), mPreviewCaptureCallback, mCaptureHandler)
         }
     }
 

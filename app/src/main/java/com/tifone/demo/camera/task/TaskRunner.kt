@@ -13,4 +13,5 @@ interface TaskRunner {
     fun setCallback(callback: Callback)
     fun run(what: Int)
     fun run(what: Int, any: Any?)
+    fun quit()
 }

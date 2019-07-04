@@ -49,6 +49,7 @@ class PhotoModule(cameraUI: CameraUI) : BaseModule, TextureViewHolder.SurfaceCal
     override fun destroy() {
         logd("destroy")
         mSurfaceHolder.unregisterSurfaceCallback(this)
+        mPresenter.destroy()
     }
 
     override fun getId(): ModuleID {
