@@ -12,7 +12,8 @@ import java.io.FileOutputStream
 import java.io.IOException
 
 class ImageSaveTask private constructor(): StorageModel {
-    private var mThread: HandlerThread? = HandlerThread("image save task thread")
+    private var mHandler: Handler? = null
+    private var mThread: HandlerThread? = null
     companion object {
         private var INSTANCE: ImageSaveTask? = null
         private val mLock = Any()
@@ -29,15 +30,29 @@ class ImageSaveTask private constructor(): StorageModel {
     }
 
     init {
-        mThread!!.start()
+        startThread()
     }
 
-    override fun release() {
+    private fun startThread() {
+        if (mThread == null) {
+            mThread = HandlerThread("image save task thread")
+            mThread?.apply {
+                start()
+                mHandler = Handler(looper)
+            }
+        }
+    }
+    private fun stopThread() {
         mThread?.apply {
             quitSafely()
             join()
             mThread = null
+            mHandler = null
         }
+    }
+
+    override fun release() {
+        stopThread()
     }
 
     @UiThread
@@ -48,7 +63,10 @@ class ImageSaveTask private constructor(): StorageModel {
         if (fileName == null || data == null) {
             return
         }
-        Handler(mThread!!.looper).post(SaveImageRunnable(fileName, data, callback))
+        if (mThread == null) {
+            startThread()
+        }
+        mHandler!!.post(SaveImageRunnable(fileName, data, callback))
     }
 
     private inner class SaveImageRunnable(fileName: String,
@@ -94,24 +112,4 @@ class ImageSaveTask private constructor(): StorageModel {
         }
     }
 
-    private class SaveImageTask: AsyncTask<DataWrapper, Int, Void>() {
-        private var mFileName: String? = null
-        private var mData: ByteArray? = null
-        private var mResultCallback: StorageModel.ResultCallback? = null
-        override fun doInBackground(vararg params: DataWrapper): Void? {
-            logd("doInBackground current thread: ${Thread.currentThread()}")
-            val request = params[0]
-            mFileName = request.get(RepositoryKeys.SAVE_PATH)
-            mData = request.get(RepositoryKeys.IMAGE_DATA)
-            if (mFileName == null || mData == null) {
-                return null
-            }
-            cancel(true)
-            return null
-        }
-
-        fun setResultCallback(callback: StorageModel.ResultCallback) {
-            mResultCallback = callback
-        }
-    }
 }

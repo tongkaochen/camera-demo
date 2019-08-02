@@ -52,4 +52,6 @@ public class BottomLayoutManager {
     public Size getThumbSize() {
         return new Size(mThumbView.getWidth(), mThumbView.getHeight());
     }
+
+
 }

@@ -37,7 +37,7 @@ class ImageUtil {
             // scale bitmap with sampling
             drawable.setBounds(0, 0, width, height)
             val bitmap = Bitmap.createBitmap(width / sampling,
-                    height / sampling, Bitmap.Config.ARGB_8888)
+                    height / sampling, Bitmap.Config.RGB_565)
             val canvas = Canvas(bitmap)
             canvas.scale(1.0f / sampling, 1.0f / sampling)
             drawable.draw(canvas)
