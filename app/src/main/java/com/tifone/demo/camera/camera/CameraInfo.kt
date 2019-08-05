@@ -6,7 +6,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.params.StreamConfigurationMap
 import android.util.Size
-import com.tifone.demo.camera.logd
+import com.tifone.demo.camera.tlogd
 import com.tifone.demo.camera.preview.PreviewSizeHelper
 
 class CameraInfo(context: Context) {
@@ -21,7 +21,7 @@ class CameraInfo(context: Context) {
         init()
     }
     /**
-     * init characteristics for all camera id
+     * create characteristics for all camera id
      */
     private fun init() {
         val cameraIdList = mCameraManager.cameraIdList
@@ -34,7 +34,7 @@ class CameraInfo(context: Context) {
     }
 
     /**
-     * set camera id
+     * set camera id, the id must beyong to cameraIdList
      */
     fun setCameraId(cameraId: CameraId) {
         val id = cameraId.value()
@@ -48,6 +48,7 @@ class CameraInfo(context: Context) {
 
     /**
      * please call {@see setCameraId} before
+     * @return all the available preview size, include the highResolution size
      */
     private fun <T> getAvailablePreviewSize(target: Class<T>): Array<Size>? {
         try {
@@ -61,13 +62,16 @@ class CameraInfo(context: Context) {
         return null
     }
 
+    /**
+     * current preview that used before
+     */
     fun getCurrentPreviewSize(): Size? {
         return mCurrentPreviewSize
     }
 
     fun <T> getPreviewSize(target: Class<T>, aspectRatio: Float): Size? {
         val availablePreviewSize = getAvailablePreviewSize(target) ?: return null
-        logd("availablePreviewSize = $availablePreviewSize")
+        tlogd("availablePreviewSize = $availablePreviewSize")
 
         if (mCurrentPreviewSize == null) {
             mCurrentPreviewSize = PreviewSizeHelper().getMatchSize(availablePreviewSize, aspectRatio)
@@ -83,7 +87,7 @@ class CameraInfo(context: Context) {
     }
 
     /**
-     * all the available size of image format
+     * all the available size of image format, use to capture image
      */
     fun getOutputSizes(format: Int): List<Size> {
         val characteristics = mCharacteristics[mCurrentId]!!
@@ -91,6 +95,9 @@ class CameraInfo(context: Context) {
         return CaptureHelper.getOutputSizes(streamMap, format)
     }
 
+    /**
+     * get the target image size for the specify aspect ratio
+     */
     fun getOutputImageSize(format: Int, aspectRatio: Float):Size {
         val availableSize = getOutputSizes(format)
         return CaptureHelper.getCaptureImageSize(availableSize, aspectRatio)
@@ -105,6 +112,9 @@ class CameraInfo(context: Context) {
         return null
     }
 
+    /**
+     * camera sensor orientation
+     */
     fun getSensorOrientation(): Int {
         return mCharacteristics[mCurrentId]
                 ?.get(CameraCharacteristics.SENSOR_ORIENTATION)

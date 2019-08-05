@@ -7,15 +7,14 @@ import android.hardware.camera2.*
 import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
-import android.util.SparseIntArray
 import android.view.Surface
 import com.tifone.demo.camera.callback.CameraStatusCallback
 import com.tifone.demo.camera.callback.TakePictureCallback
 import com.tifone.demo.camera.camera.CameraInfo
 import com.tifone.demo.camera.camera.CameraSettings
 import com.tifone.demo.camera.device.DeviceInfo
-import com.tifone.demo.camera.logd
-import com.tifone.demo.camera.loge
+import com.tifone.demo.camera.tlogd
+import com.tifone.demo.camera.tloge
 import com.tifone.demo.camera.task.CameraAsyncRunner
 import com.tifone.demo.camera.task.TaskRunner
 import com.tifone.demo.camera.utils.CameraUtil
@@ -34,10 +33,11 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     private var mPreviewRequest: CaptureRequest? = null
     private var mCameraDevice: CameraDevice? = null
     private var mContext = context
-    private var mBackgroundThread: HandlerThread? = null
+    private var mCameraPreviewThread: HandlerThread? = null
     private var mBackgroundHandler: Handler? = null
     private var mCameraManager: CameraManager
-    private var mCameraAsyncRunner: CameraAsyncRunner = CameraAsyncRunner("camera2 bg thread")
+    private var mCameraAsyncRunner: CameraAsyncRunner =
+            CameraAsyncRunner("camera2 operations bg thread")
     private val mCameraOperationLock = Semaphore(1)
     private lateinit var mCameraStatusCallback: CameraStatusCallback
     private var mPreviewSurface: Surface? = null
@@ -50,6 +50,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     private var mOrientationHelper: CameraOrientationHelper = CameraOrientationHelper()
     private var mState = State.PREVIEW
 
+    // the state of current camera, use to take picture
     private enum class State {
         PREVIEW,
         WAITING_AF_LOCKED,
@@ -57,36 +58,44 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         WAITING_AE_LOCKED,
         PICTURE_TAKEN
     }
+    // camera operations
     companion object {
+        // request to open camera
         private const val OPERATION_OPEN_CAMERA = 1
+        // request to close camera
         private const val OPERATION_CLOSE_CAMERA = 2
+        // request to create session
         private const val OPERATION_CREATE_SESSION = 3
+        // request to take picture
         private const val OPERATION_TAKE_PICTURE = 4
     }
 
     init {
+        // all the camera operation run in CameraAsyncRunner thread
         mCameraAsyncRunner.setCallback(this)
-        mCameraManager = mContext.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        mCameraManager = mContext.getSystemService(
+                Context.CAMERA_SERVICE) as CameraManager
     }
 
     override fun setCameraStatusCallback(callback: CameraStatusCallback) {
+        // notify client when camera status changed
         mCameraStatusCallback = callback
     }
     private fun startBackgroundThread() {
         // 初始化线程和handle，用于在后台处理消息
-        mBackgroundThread = HandlerThread("camera2 thread")
-        mBackgroundThread!!.start()
-        mBackgroundHandler = Handler(mBackgroundThread!!.looper)
+        mCameraPreviewThread = HandlerThread("camera2 preview thread")
+        mCameraPreviewThread!!.start()
+        mBackgroundHandler = Handler(mCameraPreviewThread!!.looper)
 
         mCaptureThread = HandlerThread("image capture thread")
         mCaptureThread!!.start()
         mCaptureHandler = Handler(mCaptureThread!!.looper)
     }
     private fun stopBackgroundThread() {
-        mBackgroundThread?.apply {
+        mCameraPreviewThread?.apply {
             quitSafely()
             join()
-            mBackgroundThread = null
+            mCameraPreviewThread = null
             mBackgroundHandler = null
         }
         mCaptureThread?.apply {
@@ -97,12 +106,13 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         }
     }
 
-    override fun openCamera(cameraInfo: CameraInfo) {
+    override fun openCameraAsync(cameraInfo: CameraInfo) {
         mCameraInfo = cameraInfo
+        // send open camera event to async runner
         mCameraAsyncRunner.run(OPERATION_OPEN_CAMERA, cameraInfo.getCameraId())
     }
 
-    override fun startPreview(surface: Surface) {
+    override fun startPreviewAsync(surface: Surface) {
         if (mCameraDevice == null) {
             loge("camera is not start, could not start preview, return")
             return
@@ -112,9 +122,10 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     }
 
     override fun setTakePictureCallback(callback: TakePictureCallback) {
+        // notify client when take picture is finished
         mTakePictureCallback = callback
     }
-    override fun takePicture() {
+    override fun takePictureAsync() {
         if (mCameraDevice == null ||
                 mCaptureSession == null) {
             loge("take picture failed")
@@ -123,7 +134,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         mCameraAsyncRunner.run(OPERATION_TAKE_PICTURE)
     }
 
-    override fun closeCamera() {
+    override fun closeCameraAsync() {
         mCameraAsyncRunner.run(OPERATION_CLOSE_CAMERA)
     }
 
@@ -131,6 +142,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         mCameraAsyncRunner.quit()
     }
 
+    // handle camera operation
     override fun onTaskRun(what: Int, any: Any?) {
         // run on background thread
         logd("what = $what")
@@ -141,9 +153,11 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
             OPERATION_TAKE_PICTURE -> handleTakePicture()
         }
     }
+
     private fun releaseCameraOperationLock() {
         mCameraOperationLock.release()
     }
+
     private fun acquireCameraOperationLock() {
         try {
             mCameraOperationLock.acquire()
@@ -183,10 +197,11 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         startBackgroundThread()
         // check camera permission, if not permission :return
         try {
-            // try to openCamera
+            // try to openCameraAsync
             // acquire the camera open lock
             if (mCameraOperationLock.tryAcquire(2000, TimeUnit.MILLISECONDS)) {
-                mCameraManager.openCamera(cameraId, mCameraOpenStateCallback, mBackgroundHandler)
+                mCameraManager.openCamera(cameraId, mCameraOpenStateCallback,
+                        mBackgroundHandler)
             } else {
                 loge("camera open timeout")
                 mCameraStatusCallback.onCameraError()
@@ -221,9 +236,10 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     }
     private fun initImageReader() {
         val previewSize = mCameraInfo.getCurrentPreviewSize()
+        // specify the aspect ratio to capture, default is 4:3
         val ratio = previewSize?.let {
             CameraUtil.getAspectRatio(it)
-        }?:CameraSettings.NORMAL_ASPECT_RATIO
+        }?:CameraSettings.ASPECT_RATIO_4_3
         val captureSize = mCameraInfo.getOutputImageSize(ImageFormat.JPEG, ratio)
         mCaptureImageReader = ImageReader.newInstance(
                 captureSize.width, captureSize.height, ImageFormat.JPEG, 1)
@@ -236,9 +252,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         val bytes = ImageUtil.imageToBytes(image)
         image.close()
         mCaptureHandler?.post {
-
-            mTakePictureCallback?.onTakeComplete(bytes)
-
+            mTakePictureCallback?.onTakenComplete(bytes)
         }
     }
     private val mCreateSessionCallback = object : CameraCaptureSession.StateCallback() {
@@ -330,7 +344,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         override fun onCaptureCompleted(session: CameraCaptureSession,
                                         request: CaptureRequest,
                                         result: TotalCaptureResult) {
-            //logd("onCaptureCompleted")
+            //tlogd("onCaptureCompleted")
             run(result)
         }
 
@@ -343,7 +357,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
         override fun onCaptureProgressed(session: CameraCaptureSession?,
                                          request: CaptureRequest,
                                          partialResult: CaptureResult) {
-            //logd("onCaptureProgressed")
+            //tlogd("onCaptureProgressed")
             run(partialResult)
         }
 
@@ -408,7 +422,7 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
                 CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
         val deviceRotation = DeviceInfo.get().getRotation()
         val sensorRotation = mCameraInfo.getSensorOrientation()
-        val pictureRotation = mOrientationHelper.getOrentation(deviceRotation, sensorRotation)
+        val pictureRotation = mOrientationHelper.getOrientation(deviceRotation, sensorRotation)
         captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, pictureRotation)
         // add capture surface
         captureBuilder.addTarget(mCaptureImageReader.surface)
@@ -491,9 +505,9 @@ class Camera2Model(context: Context): BaseCameraModel, TaskRunner.Callback {
     }
 
     fun logd(msg: String) {
-        logd(this, msg)
+        tlogd(this, msg)
     }
     fun loge(msg: String) {
-        loge(this, msg)
+        tloge(this, msg)
     }
 }

@@ -14,7 +14,7 @@ class CameraOrientationHelper {
         ORIENTATIONS.append(Surface.ROTATION_270, 180)
     }
 
-    fun getOrentation(deviceRotation: Int, sensorRotation: Int): Int {
+    fun getOrientation(deviceRotation: Int, sensorRotation: Int): Int {
         return (ORIENTATIONS[deviceRotation] + sensorRotation + 270) % 360
     }
 

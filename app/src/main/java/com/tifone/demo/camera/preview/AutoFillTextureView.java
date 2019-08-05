@@ -4,8 +4,10 @@ import android.content.Context;
 import android.util.AttributeSet;
 import android.view.TextureView;
 
-import static com.tifone.demo.camera.LogUtilKt.logd;
-import static com.tifone.demo.camera.LogUtilKt.loge;
+import com.tifone.demo.camera.LogUtilKt;
+
+import static com.tifone.demo.camera.LogUtilKt.tlogd;
+import static com.tifone.demo.camera.LogUtilKt.tloge;
 
 
 public class AutoFillTextureView extends TextureView {
@@ -25,7 +27,7 @@ public class AutoFillTextureView extends TextureView {
         if (aspectRatio < 0) {
             throw new IllegalArgumentException("aspectRatio >= 0");
         }
-        logd(this, "aspectRatio is " + aspectRatio);
+        LogUtilKt.tlogd(this, "aspectRatio is " + aspectRatio);
         mAspectRatio = aspectRatio;
         requestLayout();
     }

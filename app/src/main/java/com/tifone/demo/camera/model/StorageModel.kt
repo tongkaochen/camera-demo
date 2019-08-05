@@ -1,7 +1,6 @@
-package com.tifone.demo.camera.module
+package com.tifone.demo.camera.model
 
 import com.tifone.demo.camera.utils.DataWrapper
-import java.io.File
 
 interface StorageModel {
     interface ResultCallback {

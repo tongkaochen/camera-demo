@@ -1,8 +1,6 @@
 package com.tifone.demo.camera.presenter
 
 import android.graphics.SurfaceTexture
-import android.media.ExifInterface
-import android.media.MediaActionSound
 import android.media.MediaScannerConnection
 import android.util.Size
 import android.view.Surface
@@ -10,14 +8,13 @@ import com.tifone.demo.camera.callback.CameraStatusCallback
 import com.tifone.demo.camera.callback.TakePictureCallback
 import com.tifone.demo.camera.camera.CameraId
 import com.tifone.demo.camera.camera.CameraInfo
-import com.tifone.demo.camera.logd
-import com.tifone.demo.camera.loge
-import com.tifone.demo.camera.logw
+import com.tifone.demo.camera.tlogd
+import com.tifone.demo.camera.tloge
+import com.tifone.demo.camera.tlogw
 import com.tifone.demo.camera.media.CameraEffectPlayer
 import com.tifone.demo.camera.model.BaseCameraModel
 import com.tifone.demo.camera.model.CameraModelManager
-import com.tifone.demo.camera.module.StorageModel
-import com.tifone.demo.camera.preview.PreviewSizeHelper
+import com.tifone.demo.camera.model.StorageModel
 import com.tifone.demo.camera.repository.FileNameGenerator
 import com.tifone.demo.camera.repository.RepositoryKeys
 import com.tifone.demo.camera.repository.RepositoryManager
@@ -51,8 +48,8 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
     private lateinit var mImageFileNameGenerator: FileNameGenerator
     private var mSoundPlayer = CameraEffectPlayer()
 
-    fun init() {
-        logd("init")
+    fun create() {
+        logd("create")
         createCameraModule()
         mImageRepository = RepositoryManager.getImageRepository()
         mDataWrapper = DataWrapper()
@@ -70,7 +67,7 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
         return true
     }
     fun openCamera(cameraId: CameraId) {
-        logd("openCamera")
+        logd("openCameraAsync")
         if (!isCameraOpenAllowed()) {
             return
         }
@@ -81,7 +78,7 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
         if (mPreviewSize == null) {
             return
         }
-        mCameraModel.openCamera(mCameraInfo)
+        mCameraModel.openCameraAsync(mCameraInfo)
         mCameraOpened = true
     }
     private val mCameraStatusCallback =
@@ -105,9 +102,9 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
             }
     private fun tryToStartPreview() {
         if (mSurfacePrepared) {
-            logd("startPreview")
+            logd("startPreviewAsync")
             mSurfaceTexture!!.setDefaultBufferSize(mPreviewSize!!.width, mPreviewSize!!.height)
-            mCameraModel.startPreview(Surface(mSurfaceTexture))
+            mCameraModel.startPreviewAsync(Surface(mSurfaceTexture))
         } else {
             waitingForSurfaceAvailable()
         }
@@ -117,11 +114,9 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
                         CONSTANT.SURFACE_AVAILABLE_LOCK_TIMEOUT,
                         TimeUnit.MILLISECONDS)) {
             if (mCameraUI.getViewState() != ViewState.DISPLAYING) {
-                loge(this, "mPaused status occur Time out waiting for surface.")
-                //throw IllegalStateException("Paused Time out waiting for surface.")
+                tloge(this, "mPaused status occur Time out waiting for surface.")
             } else {
-                loge(this, "Time out waiting for surface.")
-                //throw RuntimeException("Time out waiting for surface.")
+                tloge(this, "Time out waiting for surface.")
             }
         } else {
             logd("surface ready to preview")
@@ -130,9 +125,9 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
         mSurfacePreparedLock.release()
     }
     fun closeCamera() {
-        logd("closeCamera")
+        logd("closeCameraAsync")
         mCameraOpened = false
-        mCameraModel.closeCamera()
+        mCameraModel.closeCameraAsync()
     }
     fun applyFlashMode() {
         logd("applyFlashMode")
@@ -142,7 +137,7 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
         logd("applyAEMode")
     }
     fun applyAFMode() {
-        logd("closeCamera")
+        logd("closeCameraAsync")
     }
     fun applyZoom() {
         logd("applyZoom")
@@ -154,13 +149,13 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
         mCameraModel.setCameraStatusCallback(mCameraStatusCallback)
     }
     private fun logd(msg: String) {
-        logd(this, msg)
+        tlogd(this, msg)
     }
     private fun loge(msg: String) {
-        loge(this, msg)
+        tloge(this, msg)
     }
     private fun logw(msg: String) {
-        logw(this, msg)
+        tlogw(this, msg)
     }
 
     fun onSurfaceAvailable(surface: SurfaceTexture, width: Int, height: Int) {
@@ -177,17 +172,19 @@ open abstract class CameraPresenter(cameraUI: CameraUI) {
         // process take picture
         if (mCameraOpened) {
             mCameraModel.setTakePictureCallback(mTakePictureCallback)
-            mCameraModel.takePicture()
+            mCameraModel.takePictureAsync()
         }
     }
     fun destroy() {
         mCameraModel.destroy()
         mImageRepository.release()
+        mSoundPlayer.release()
     }
+
     private val mTakePictureCallback = object : TakePictureCallback {
-        override fun onTakeComplete(data: ByteArray) {
-            logd("onTakeComplete: $data")
-            mSoundPlayer.playShutterEffect()
+        override fun onTakenComplete(data: ByteArray) {
+            logd("onTakenComplete: $data")
+            mSoundPlayer.playShutterEffect() // sound feedback
             val fileName = mImageFileNameGenerator.generate(FileNameGenerator.TYPE_JPEG)
             mDataWrapper.set(RepositoryKeys.SAVE_PATH, fileName)
             mDataWrapper.set(RepositoryKeys.IMAGE_DATA, data)

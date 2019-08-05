@@ -4,5 +4,5 @@ import android.os.Environment
 
 
 fun getExternalPath(): String {
-    return Environment.getExternalStoragePublicDirectory("").toString() + "/camera-demo/"
+    return Environment.getExternalStoragePublicDirectory("").toString() + "/camera-demo"
 }

@@ -1,6 +1,6 @@
 package com.tifone.demo.camera.module
 
-import com.tifone.demo.camera.logd
+import com.tifone.demo.camera.tlogd
 import com.tifone.demo.camera.view.CameraUI
 
 class ModuleManager private constructor() {
@@ -54,6 +54,6 @@ class ModuleManager private constructor() {
     }
 
     private fun logd(msg: String) {
-        logd(this, msg)
+        tlogd(this, msg)
     }
 }

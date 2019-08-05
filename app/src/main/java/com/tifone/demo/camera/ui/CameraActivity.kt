@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.os.Handler
 import android.util.Size
 import android.view.LayoutInflater
 import android.view.TextureView
@@ -16,11 +15,11 @@ import android.widget.RelativeLayout
 import com.tifone.demo.camera.R
 import com.tifone.demo.camera.camera.CameraSettings
 import com.tifone.demo.camera.device.DeviceInfo
-import com.tifone.demo.camera.logd
+import com.tifone.demo.camera.tlogd
 import com.tifone.demo.camera.module.ModuleID
 import com.tifone.demo.camera.module.ModuleManager
 import com.tifone.demo.camera.preview.AutoFillTextureView
-import com.tifone.demo.camera.preview.TextureViewHolder
+import com.tifone.demo.camera.preview.TextureViewController
 import com.tifone.demo.camera.utils.PermissionUtil
 import com.tifone.demo.camera.view.BottomLayoutManager
 import com.tifone.demo.camera.view.CameraUI
@@ -36,7 +35,7 @@ class CameraActivity: BaseActivity(), CameraUI {
     }
 
     private lateinit var mBottomBarContainer: FrameLayout
-    private lateinit var mTextureViewHolder: TextureViewHolder
+    private lateinit var mTextureViewController: TextureViewController
     private lateinit var mPreviewContainer: FrameLayout
     private lateinit var mModuleManager: ModuleManager
     private val mDeviceInfo = DeviceInfo.get()
@@ -95,11 +94,11 @@ class CameraActivity: BaseActivity(), CameraUI {
         mBottomBarContainer.layoutParams = params
         mBottomLayoutManager = BottomLayoutManager(this, mBottomBarContainer)
         mBottomLayoutManager.init()
-        com.tifone.demo.camera.logd("current thread: ${Thread.currentThread()}")
+        tlogd("current thread: ${Thread.currentThread()}")
     }
     private fun initSurfaceHolder() {
-        logd("init texture view")
-        mTextureViewHolder = TextureViewHolder()
+        logd("create texture view")
+        mTextureViewController = TextureViewController()
         // inflater texture view from layout
         val view = LayoutInflater.from(this).inflate(R.layout.texture_view, null)
         val textureView: AutoFillTextureView = view.findViewById(R.id.preview_texture)
@@ -107,7 +106,7 @@ class CameraActivity: BaseActivity(), CameraUI {
         // add to preview container
         mPreviewContainer.addView(textureView)
         // attach to view holder
-        mTextureViewHolder.attachTextureView(textureView)
+        mTextureViewController.attachTextureView(textureView)
     }
     private fun initModule() {
         // create the default module, photo module
@@ -163,8 +162,8 @@ class CameraActivity: BaseActivity(), CameraUI {
 
     }
 
-    override fun getPreviewSurfaceHolder(): TextureViewHolder {
-        return mTextureViewHolder
+    override fun getPreviewSurfaceHolder(): TextureViewController {
+        return mTextureViewController
     }
 
     override fun getViewState(): ViewState {
@@ -172,12 +171,12 @@ class CameraActivity: BaseActivity(), CameraUI {
     }
 
     override fun getUIAspectRatio(): Float {
-        return CameraSettings.TARGET_ASPECT_RATIO
+        return CameraSettings.ASPECT_RATIO_2_1
     }
 
     override fun setPreviewAspectRatio(ratio: Float) {
         val textureView: TextureView =
-                mTextureViewHolder.getTextureView()
+                mTextureViewController.getTextureView()
         if (textureView is AutoFillTextureView) {
             textureView.setAspectRatio(ratio)
         }
@@ -194,6 +193,6 @@ class CameraActivity: BaseActivity(), CameraUI {
     }
 
     private fun logd(msg: String) {
-        logd(this, msg)
+        tlogd(this, msg)
     }
 }

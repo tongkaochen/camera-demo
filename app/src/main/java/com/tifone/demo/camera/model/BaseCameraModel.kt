@@ -14,10 +14,10 @@ import com.tifone.demo.camera.camera.CameraInfo
  */
 interface BaseCameraModel {
     fun setCameraStatusCallback(callback:CameraStatusCallback)
-    fun openCamera(cameraInfo: CameraInfo)
-    fun startPreview(surface:Surface)
-    fun closeCamera()
+    fun openCameraAsync(cameraInfo: CameraInfo)
+    fun startPreviewAsync(surface:Surface)
+    fun closeCameraAsync()
     fun destroy()
-    fun takePicture()
+    fun takePictureAsync()
     fun setTakePictureCallback(callback: TakePictureCallback)
 }

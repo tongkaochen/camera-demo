@@ -16,22 +16,22 @@ class CameraModel(context: Context): BaseCameraModel {
 
     }
 
-    override fun startPreview(surface: Surface) {
+    override fun startPreviewAsync(surface: Surface) {
     }
 
     private var mContext = context
 
-    override fun openCamera(cameraInfo: CameraInfo) {
+    override fun openCameraAsync(cameraInfo: CameraInfo) {
 
     }
 
-    override fun takePicture() {
+    override fun takePictureAsync() {
     }
 
     override fun setTakePictureCallback(callback: TakePictureCallback) {
     }
 
-    override fun closeCamera() {
+    override fun closeCameraAsync() {
 
     }
 

@@ -3,9 +3,9 @@ package com.tifone.demo.camera.preview
 import android.util.Size
 import android.view.Surface
 import com.tifone.demo.camera.device.DeviceInfo
-import com.tifone.demo.camera.logd
-import com.tifone.demo.camera.loge
-import com.tifone.demo.camera.logw
+import com.tifone.demo.camera.tlogd
+import com.tifone.demo.camera.tloge
+import com.tifone.demo.camera.tlogw
 import java.util.*
 
 class PreviewSizeHelper {
@@ -14,8 +14,8 @@ class PreviewSizeHelper {
     }
     fun getMatchSize(availableSizes: Array<Size>, targetRatio: Float): Size {
         val screenSize = DeviceInfo.get().getScreenSize()
-        logd(TAG, "screen size: $screenSize")
-        val targetSize = Size(screenSize.width, (screenSize.width * targetRatio).toInt())
+        tlogd(TAG, "screen size: $screenSize")
+        val targetSize = Size((screenSize.width * targetRatio).toInt(), screenSize.width)
         return findBestMatchPreviewSize(availableSizes.toList(), targetSize)
     }
 
@@ -35,7 +35,7 @@ class PreviewSizeHelper {
 
     private fun needSwapDimensions(sensorOrientation: Int,
                                    screenRotation: Int): Boolean {
-        logd("device rotation = $sensorOrientation")
+        tlogd("device rotation = $sensorOrientation")
         var needSwapped = false
         when (screenRotation) {
             Surface.ROTATION_0, Surface.ROTATION_180 -> {
@@ -48,29 +48,37 @@ class PreviewSizeHelper {
                     needSwapped = true
                 }
             }
-            else -> loge("Screen rotation is invalid: $screenRotation")
+            else -> tloge("Screen rotation is invalid: $screenRotation")
         }
         return needSwapped
     }
 
     private fun findBestMatchPreviewSize(sizes: List<Size>,
                                                 defaultDisplaySize: Size): Size {
+        var bastMatchIndex = sizes.indexOf(defaultDisplaySize)
+        if (bastMatchIndex != -1) {
+            return sizes[bastMatchIndex]
+        }
         var result = findSizeWithRatio(sizes, defaultDisplaySize)
-        logd(TAG, "size = $result")
+        tlogd(TAG, "size = $result")
         if (result == null) {
             result = findSizeWithArea(sizes, defaultDisplaySize)
         }
-        logd(TAG, "previewSize = $result")
+        tlogd(TAG, "previewSize = $result")
         return result
     }
 
     private fun findSizeWithRatio(sizes: List<Size>, defaultDisplaySize: Size): Size? {
         val targetRatio = getRatio(defaultDisplaySize)
         val matchedTargets = ArrayList<Size>()
-        logd(TAG, "targetRatio = $targetRatio")
+        tlogd(TAG, "targetRatio = $targetRatio")
         for (size in sizes) {
             val itsRatio = getRatio(size)
-            logd(TAG, "itsRatio = $itsRatio")
+            tlogd(TAG, "itsRatio = $itsRatio")
+            // use the display size if matched
+            if (size == defaultDisplaySize) {
+                return size
+            }
             if (isRatioMatched(itsRatio, targetRatio)) {
                 // aspect ratio is nearest
                 matchedTargets.add(size)
@@ -95,15 +103,15 @@ class PreviewSizeHelper {
             val ratio = getRatio(size)
             val area = getArea(size)
             if (isBigEnough(size, defaultDisplaySize)) {
-                logd(TAG, "isBigEnough = $size")
+                tlogd(TAG, "isBigEnough = $size")
                 if (getDiff(targetRatio, ratio) < minRatioDiff) {
                     minRatioDiff = getDiff(targetRatio, ratio)
                     bigEnoughIndex = i
                 }
             } else {
-                logd(TAG, "notBigEnough = $size")
+                tlogd(TAG, "notBigEnough = $size")
                 if (getDiff(targetArea, area) < minAreaDiff) {
-                    logd(TAG, "isMatched = $size")
+                    tlogd(TAG, "isMatched = $size")
                     minAreaDiff = getDiff(targetArea, area)
                     targetIndex = i
                 }
@@ -137,7 +145,7 @@ class PreviewSizeHelper {
 
     private fun getTolerance(ratio: Double): Double {
         return if (ratio > 1.3433 && ratio < 1.35) {
-            logw(TAG, "4:3 ratio out of normal tolerance, increasing tolerance to 0.02")
+            tlogw(TAG, "4:3 ratio out of normal tolerance, increasing tolerance to 0.02")
             0.02
         } else {
             0.01

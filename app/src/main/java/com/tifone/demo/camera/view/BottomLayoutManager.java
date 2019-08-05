@@ -10,6 +10,7 @@ import android.widget.ImageView;
 
 import com.tifone.demo.camera.R;
 import com.tifone.demo.camera.event.ShutterClickDispatcher;
+import com.tifone.demo.camera.thumb.ThumbnailViewController;
 import com.tifone.demo.camera.widget.CircleImageView;
 
 import org.jetbrains.annotations.NotNull;
@@ -20,6 +21,7 @@ public class BottomLayoutManager {
     private ImageView mShutterButton;
     private ShutterClickDispatcher mDispatcher;
     private CircleImageView mThumbView;
+    private ThumbnailViewController mThumbnailController;
 
     public BottomLayoutManager(Context context, ViewGroup root) {
         mContext = context;
@@ -34,6 +36,7 @@ public class BottomLayoutManager {
         mShutterButton.setOnClickListener(mShutterClickedListener);
 
         mThumbView = view.findViewById(R.id.thumb_iv);
+        mThumbnailController = new ThumbnailViewController(mContext, mThumbView);
         // add layout to root
         mRoot.addView(view);
     }
@@ -45,7 +48,7 @@ public class BottomLayoutManager {
     };
 
     public void updateThumb(Bitmap bitmap) {
-        mThumbView.setImageBitmap(bitmap);
+        mThumbnailController.setThumbnail(bitmap);
     }
 
     @NotNull

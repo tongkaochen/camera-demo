@@ -4,8 +4,8 @@ import android.graphics.SurfaceTexture
 import android.os.Handler
 import android.view.TextureView
 
-class TextureViewHolder {
-    private var mCallbacks: MutableList<SurfaceCallback> = ArrayList()
+class TextureViewController {
+    private var mCallback: SurfaceCallback? = null
     private lateinit var mTextureView: TextureView
     interface SurfaceCallback {
         fun onSurfaceAvailable(surface: SurfaceTexture, width: Int, height: Int)
@@ -31,25 +31,22 @@ class TextureViewHolder {
             }
         }
     }
-    fun registerSurfaceCallback(callback: SurfaceCallback) {
-        mCallbacks.add(callback)
-    }
-    fun unregisterSurfaceCallback(callback: SurfaceCallback) {
-        mCallbacks.remove(callback)
+    fun setSurfaceCallback(callback: SurfaceCallback) {
+        mCallback = callback
     }
     private fun surfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-        for (callback in mCallbacks) {
-            callback.onSurfaceAvailable(surface, width, height)
+        mCallback?.apply {
+            onSurfaceAvailable(surface, width, height)
         }
     }
     private fun surfaceTextureDestroyed() {
-        for (callback in mCallbacks) {
-            callback.onSurfaceDestroy()
+        mCallback?.apply {
+            onSurfaceDestroy()
         }
     }
     private fun surfaceTextureSizeChanged(surface: SurfaceTexture?, width: Int, height: Int) {
-        for (callback in mCallbacks) {
-            callback.onSurfaceChanged(surface, width, height)
+        mCallback?.apply {
+            onSurfaceChanged(surface, width, height)
         }
     }
 

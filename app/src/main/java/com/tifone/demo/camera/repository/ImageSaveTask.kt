@@ -1,11 +1,10 @@
 package com.tifone.demo.camera.repository
 
-import android.os.AsyncTask
 import android.os.Handler
 import android.os.HandlerThread
 import android.support.annotation.UiThread
-import com.tifone.demo.camera.logd
-import com.tifone.demo.camera.module.StorageModel
+import com.tifone.demo.camera.tlogd
+import com.tifone.demo.camera.model.StorageModel
 import com.tifone.demo.camera.utils.DataWrapper
 import java.io.File
 import java.io.FileOutputStream
@@ -57,7 +56,7 @@ class ImageSaveTask private constructor(): StorageModel {
 
     @UiThread
     override  fun execute(request: DataWrapper, callback: StorageModel.ResultCallback) {
-        logd("current thread: ${Thread.currentThread()}")
+        tlogd("current thread: ${Thread.currentThread()}")
         val fileName = request.get(RepositoryKeys.SAVE_PATH)
         val data = request.get(RepositoryKeys.IMAGE_DATA)
         if (fileName == null || data == null) {

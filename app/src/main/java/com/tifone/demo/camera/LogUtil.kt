@@ -5,38 +5,38 @@ import android.util.Log
 const val TAG = "tifone"
 const val DEBUG: Boolean = true
 
-fun logd(msg: String) {
+fun tlogd(msg: String) {
     if (DEBUG) Log.d(TAG, msg)
 }
 
-fun logd(any: Any, msg: String) {
+fun tlogd(any: Any, msg: String) {
     if (DEBUG) Log.d(TAG, any.javaClass.simpleName + ": " + msg)
 }
 
-fun logd(key: String, msg: String) {
+fun tlogd(key: String, msg: String) {
     if (DEBUG) Log.d(TAG, "$key: $msg")
 }
 
-fun loge(any: Any, msg: String) {
+fun tloge(any: Any, msg: String) {
     Log.e(TAG, any.javaClass.simpleName + ": " + msg)
 }
 
-fun loge(msg: String) {
+fun tloge(msg: String) {
     Log.e(TAG, msg)
 }
 
-fun loge(key: String, msg: String) {
+fun tloge(key: String, msg: String) {
     Log.e(TAG, "$key: $msg")
 }
 
-fun logw(msg: String) {
+fun tlogw(msg: String) {
     Log.w(TAG, msg)
 }
 
-fun logw(any: Any, msg: String) {
+fun tlogw(any: Any, msg: String) {
     Log.w(TAG, any.javaClass.simpleName + ": " + msg)
 }
 
-fun logw(key: String, msg: String) {
+fun tlogw(key: String, msg: String) {
     Log.w(TAG, "$key: $msg")
 }

@@ -4,26 +4,27 @@ import android.graphics.SurfaceTexture
 import android.view.View
 import com.tifone.demo.camera.camera.CameraId
 import com.tifone.demo.camera.event.ShutterClickDispatcher
-import com.tifone.demo.camera.logd
+import com.tifone.demo.camera.tlogd
 import com.tifone.demo.camera.presenter.PhotoPresenter
-import com.tifone.demo.camera.preview.TextureViewHolder
+import com.tifone.demo.camera.preview.TextureViewController
 import com.tifone.demo.camera.view.CameraUI
 
 /**
  * camera photo module
  * manage the photo relate logic
  */
-class PhotoModule(cameraUI: CameraUI) : BaseModule, TextureViewHolder.SurfaceCallback {
+class PhotoModule(cameraUI: CameraUI) :
+        BaseModule {
+
     private var mCameraUI: CameraUI = cameraUI
     private lateinit var mPresenter: PhotoPresenter
-    private val mSurfaceHolder = cameraUI.getPreviewSurfaceHolder()
+    private val mTextureController = cameraUI.getPreviewSurfaceHolder()
     private var mShutterClickDispatcher: ShutterClickDispatcher = ShutterClickDispatcher.getDefault()
 
     override fun create() {
         logd("create")
         mPresenter = PhotoPresenter(mCameraUI)
-        mPresenter.init()
-        mSurfaceHolder.registerSurfaceCallback(this)
+        mPresenter.create()
         mShutterClickDispatcher.register(mShutterClicked)
     }
     private val mShutterClicked = object : ShutterClickDispatcher.ShutterClickListener {
@@ -32,12 +33,13 @@ class PhotoModule(cameraUI: CameraUI) : BaseModule, TextureViewHolder.SurfaceCal
         }
     }
     private fun takePicture() {
-        logd("takePicture")
+        logd("takePictureAsync")
         mPresenter.takePicture()
     }
 
     override fun start() {
         logd("start")
+        mTextureController.setSurfaceCallback(mTextureListener)
         mPresenter.openCamera(CameraId.ID_BACK)
     }
 
@@ -48,7 +50,7 @@ class PhotoModule(cameraUI: CameraUI) : BaseModule, TextureViewHolder.SurfaceCal
 
     override fun destroy() {
         logd("destroy")
-        mSurfaceHolder.unregisterSurfaceCallback(this)
+        mShutterClickDispatcher.unregister(mShutterClicked)
         mPresenter.destroy()
     }
 
@@ -56,21 +58,24 @@ class PhotoModule(cameraUI: CameraUI) : BaseModule, TextureViewHolder.SurfaceCal
         return ModuleID.PHOTO
     }
 
-    override fun onSurfaceAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-        logd("onSurfaceAvailable")
-        mPresenter.onSurfaceAvailable(surface, width, height)
-    }
+    private var mTextureListener = object: TextureViewController.SurfaceCallback {
+        override fun onSurfaceAvailable(surface: SurfaceTexture,
+                                        width: Int, height: Int) {
+            logd("onSurfaceAvailable")
+            mPresenter.onSurfaceAvailable(surface, width, height)
+        }
 
-    override fun onSurfaceDestroy() {
-        logd("onSurfaceAvailable")
-        mPresenter.onSurfaceDestroy()
-    }
+        override fun onSurfaceDestroy() {
+            logd("onSurfaceAvailable")
+            mPresenter.onSurfaceDestroy()
+        }
 
-    override fun onSurfaceChanged(surface: SurfaceTexture?, width: Int, height: Int) {
+        override fun onSurfaceChanged(surface: SurfaceTexture?, width: Int, height: Int) {
+        }
     }
 
     private fun logd(msg: String) {
-        logd(this,msg)
+        tlogd(this,msg)
     }
 
 }

@@ -1,6 +1,6 @@
 package com.tifone.demo.camera.repository;
 
-import com.tifone.demo.camera.module.StorageModel;
+import com.tifone.demo.camera.model.StorageModel;
 
 public class RepositoryManager {
 

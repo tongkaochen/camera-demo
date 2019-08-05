@@ -5,7 +5,7 @@ import android.graphics.drawable.Drawable
 import com.tifone.demo.camera.utils.BitmapUtil
 import kotlin.math.min
 
-class RoundDrawable() : Drawable() {
+class RoundDrawable : Drawable() {
     private var mBitmap: Bitmap? = null
     private var mPaint = Paint()
     private var mWidth = 0
@@ -19,6 +19,10 @@ class RoundDrawable() : Drawable() {
         mPaint.isAntiAlias = true
         mWidth = min(bitmap.width, bitmap.height)
         invalidateSelf() // reflash
+    }
+
+    fun getBitmap(): Bitmap? {
+        return mBitmap
     }
 
     // drawable real size
